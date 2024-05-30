@@ -1,4 +1,5 @@
 import dateutil
+from shift_converter import *
 
 class Node:
     f = open("log.txt", "a")
@@ -13,6 +14,15 @@ class Node:
         self.unsched_pred_count = 0
         self.successors = []
         self.unsched_succ_count = 0
+        
+        self.ps_date = ''
+        self.ps_shift = 0
+        
+        self.as_date = ''
+        self.as_shift = 0
+        
+        self.af_date = ''
+        self.af_shift = 0
         
         self.es_date = ''
         self.es_shift = 0
@@ -30,10 +40,55 @@ class Node:
         self.ss_shift = 0 
         self.forward_scheduled = False
         
+    # ps = early_start
+    def set_ps_with_time(self, date, time):
+        self.ps_date = date
+        self.ps_shift = convert_start_to_shift(time)
+    
+    def get_ps_date(self):
+        return self.ps_date
+    
+    def get_ps_shift(self):
+        return self.ps_shift
+    
+    # as = actual_start
+    def set_as(self, date, shift):
+        self.as_date = date
+        self.as_shift = shift
+        
+    def set_as_with_time(self, date, time):
+        self.as_date = date
+        self.as_shift = convert_start_to_shift(time)
+    
+    def get_as_date(self):
+        return self.as_date
+    
+    def get_as_shift(self):
+        return self.as_shift
+    
+    # af = actual_finish
+    def set_af(self, date, shift):
+        self.af_date = date
+        self.af_shift = shift
+        
+    def set_af_with_time(self, date, time):
+        self.af_date = date
+        self.af_shift = convert_end_to_shift(time)
+    
+    def get_af_date(self):
+        return self.af_date
+    
+    def get_af_shift(self):
+        return self.af_shift
+        
     # es = early_start
     def set_es(self, date, shift):
         self.es_date = date
         self.es_shift = shift
+        
+    def set_es_with_time(self, date, time):
+        self.es_date = date
+        self.es_shift = convert_start_to_shift(time)
     
     def get_es_date(self):
         return self.es_date
@@ -45,6 +100,10 @@ class Node:
     def set_ef(self, date, shift):
         self.ef_date = date
         self.ef_shift = shift
+        
+    def set_ef_with_time(self, date, time):
+        self.ef_date = date
+        self.ef_shift = convert_end_to_shift(time)
     
     def get_ef_date(self):
         return self.ef_date
@@ -56,6 +115,10 @@ class Node:
     def set_ls(self, date, shift):
         self.ls_date = date
         self.ls_shift = shift
+        
+    def set_ls(self, date, time):
+        self.ls_date = date
+        self.ls_shift = convert_start_to_shift(time)
     
     def get_ls_date(self):
         return self.ls_date
@@ -67,6 +130,10 @@ class Node:
     def set_lf(self, date, shift):
         self.lf_date = date
         self.lf_shift = shift
+        
+    def set_lf(self, date, time):
+        self.lf_date = date
+        self.lf_shift = convert_end_to_shift(time)
     
     def get_lf_date(self):
         return self.lf_date
@@ -75,9 +142,9 @@ class Node:
         return self.lf_shift
     
     # ss = scheduled_start
-    def set_ss(self, date, shift):
+    def set_ss_with_time(self, date, time):
         self.ss_date = date
-        self.ss_shift = shift
+        self.ss_shift = convert_start_to_shift(time)
     
     def get_ss_date(self):
         return self.ss_date
@@ -118,8 +185,11 @@ class Node:
 
         latest_finish = earliest_date
         latest_shift = 1
-        for n in self.successors:
-            if nodes[n].ef_date > latest_finish:
+        for n in self.predecessors:
+            if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
+                latest_finish = nodes[n].af_date
+                latest_shift = nodes[n].af_shift
+            elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
                 latest_finish = nodes[n].ef_date
                 latest_shift = nodes[n].ef_shift
             elif nodes[n].ef_date == latest_finish:
@@ -135,6 +205,7 @@ class Node:
             
     #Finds the next working shift for the node, not including the date/shift that is passed in
     def __find_next_working_date_shift(self, starting_date, starting_shift, holidays):
+        #print (dateutil.parser.parse("1/2/24").weekday())
         return starting_date, starting_shift
     
     def __schedule_successors(self, earliest_date, holidays, nodes):
@@ -145,7 +216,7 @@ class Node:
                 nodes[n].decr_unsched_pred_count()
     
     def __str__(self):
-        return "Name: %s, \tDU: %s, \tCal Code: %s, \tPred: %s, \tSucc: %s" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count)
+        return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count)
     
     def __repr__(self):
         return "something"
