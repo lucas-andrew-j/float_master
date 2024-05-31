@@ -3,6 +3,70 @@ import node
 from shift_converter import *
 from datetime import *
 
+def schedule_forward_pass(node, earliest_date, holidays, nodes):
+    node.f.write("Scheduling %s\n" % (node.name))
+    node.forward_scheduled = True
+    #TODO Schedule this node
+
+    latest_finish = earliest_date
+    latest_shift = 1
+    for n in node.predecessors:
+        if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
+            latest_finish = nodes[n].af_date
+            latest_shift = nodes[n].af_shift
+        elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
+            latest_finish = nodes[n].ef_date
+            latest_shift = nodes[n].ef_shift
+        elif nodes[n].ef_date == latest_finish:
+            latest_shift = max(latest_shift, nodes[n].es_shift)
+
+    #TODO Set the ES of this job to the first working shift after the date found in the previous step
+    (node.es_date, node.es_shift) = find_next_working_date_shift(node, latest_finish, latest_shift, holidays)
+
+    (node.ef_date, node.ef_shift) = calc_finish_date_shift(node, node.es_date, node.es_shift, holidays)
+
+    schedule_successors(node, earliest_date, holidays, nodes)
+            
+#Finds the next working shift for the node, not including the date/shift that is passed in
+def find_next_working_date_shift(node, prior_date, prior_shift, holidays):
+    #print (dateutil.parser.parse("1/2/24").weekday())
+
+    if prior_shift >= 3:
+        prior_shift = 1
+        next_date = prior_date + timedelta(days = 5)
+    else:
+        next_shift = prior_shift + 1
+
+    return prior_date, prior_shift
+
+def calc_finish_date_shift(node, start_date, start_shift, holidays):
+    #TODO Calculate the minimum date that the early finish could be (based on cal_code)
+    shifts_per_day = node.cal_code // 10
+    days_per_week = node.cal_code % 10
+    weekend_days_per_week = 7 - days_per_week
+
+    min_working_days = node.rdu // shifts_per_day
+    if days_per_week != 0 and days_per_week != 7:
+        min_work_weeks = min_working_days // days_per_week
+        min_days = min_working_days + min_work_weeks * weekend_days_per_week
+    else:
+        min_days = min_working_days
+
+    min_days = timedelta(days = min_days)
+
+    finish_date = start_date + min_days
+
+    #TODO Keep incrementing the EF date forward until the DU between ES and EF equals RDU
+
+    return (finish_date, start_shift)
+    
+def schedule_successors(node, earliest_date, holidays, nodes):
+    for n in node.successors:
+        if nodes[n].unsched_pred_count == 1:
+            schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
+        else:
+            nodes[n].decr_unsched_pred_count()
+
 print(date.today())
 print(MINYEAR)
 
@@ -35,7 +99,7 @@ with open(nodes_file, newline='') as csvfile:
     
     for row in file_reader:
         #print(', '.join(row))
-        new_node = node.Node(row[ID_COL], row[RDU_COL], row[CALNUM_COL])
+        new_node = node.Node(row[ID_COL], int(row[RDU_COL]), int(row[CALNUM_COL]))
         
         #TODO Add the rest of the fields to new_node if they exist
         if row[PS_COL] != '':
@@ -65,9 +129,11 @@ with open(links_file, newline='') as csvfile:
         
 #test_clear_nodes(nodes)
 
+#TODO Create holiday manager
+
 for n in nodes:
     if nodes[n].unsched_pred_count == 0:
-        nodes[n].schedule_forward_pass(date.today(), [], nodes)
+        schedule_forward_pass(nodes[n], date.today(), [], nodes)
         
 for n in nodes:
     print(nodes[n])
