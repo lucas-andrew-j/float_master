@@ -26,6 +26,8 @@ class Holiday_Handler:
         
         self.lowest_year = first_year
         self.highest_year = last_year
+        
+        
     
     def add_year(self, year):
         if year == self.highest_year + 1:
@@ -35,8 +37,30 @@ class Holiday_Handler:
             self.__add_year(year)
             self.lowest_year = year
             self.holiday_arr.sort()
+            self.closure_saturdays_arr.sort()
+            self.closure_sundays_arr.sort()
         else:
             raise Exception("Attempted to add year to holidays that is not adjacent to the lowest or highest current years")
+    
+    # Returns the number of holidays between the two given dates (including either date if they are holidays)
+    def count_holidays_between(self, start_date, finish_date, cal_code):
+        start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.holiday_arr)
+        finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.holiday_arr)
+        
+        count = finish_index - start_index + 1
+        
+        # TODO Handle saturdays and sundays for 6 and 7 cal codes
+        if cal_code % 10 == 7:
+            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.closure_sundays_arr)
+            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.closure_sundays_arr)
+            count = count + finish_index - start_index + 1
+            
+        if cal_code % 10 >= 6:
+            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.closure_saturdays_arr)
+            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.closure_saturdays_arr)
+            count = count + finish_index - start_index + 1
+        
+        return count
             
     def __add_year(self, year):
         self.__add_new_year(year)
@@ -174,3 +198,55 @@ class Holiday_Handler:
         xmas_holiday = dateutil.parser.parse("12/25/%d" % year).date()
         observed_holiday = Holiday_Handler.__nearest_weekend_day(xmas_holiday)
         return observed_holiday
+    
+    # Returns the index of the closest holiday that is greater than or equal to the given date
+    @staticmethod
+    def __get_index_closest_gte(date, date_arr):
+        middle = len(date_arr) // 2
+        lower = 0
+        upper = len(date_arr) - 1
+        
+        while True:
+            if date_arr[middle] == date:
+                start_index = middle
+                break
+            elif date_arr[middle] > date:
+                upper = middle - 1
+            else:
+                lower = middle + 1
+            
+            middle = (upper - lower) // 2 + lower
+            
+            if middle >= upper and middle <= lower:
+                break
+        
+        if date_arr[middle] < date:
+            middle = middle + 1
+            
+        return middle
+            
+    # Returns the index of the closest holiday that is less than or equal to the given date
+    @staticmethod
+    def __get_index_closest_lte(date, date_arr):
+        middle = len(date_arr) // 2
+        lower = 0
+        upper = len(date_arr) - 1
+        
+        while True:
+            if date_arr[middle] == date:
+                start_index = middle
+                break
+            elif date_arr[middle] > date:
+                upper = middle - 1
+            else:
+                lower = middle + 1
+            
+            middle = (upper - lower) // 2 + lower
+            
+            if middle >= upper and middle <= lower:
+                break
+        
+        if date_arr[middle] > date:
+            middle = middle - 1
+            
+        return middle
