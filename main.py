@@ -2,6 +2,7 @@ import csv
 import node
 from shift_converter import *
 from datetime import *
+from holiday_handler import *
 
 def schedule_forward_pass(node, earliest_date, holidays, nodes):
     node.f.write("Scheduling %s\n" % (node.name))
@@ -21,21 +22,29 @@ def schedule_forward_pass(node, earliest_date, holidays, nodes):
             latest_shift = max(latest_shift, nodes[n].es_shift)
 
     #TODO Set the ES of this job to the first working shift after the date found in the previous step
-    (node.es_date, node.es_shift) = find_next_working_date_shift(node, latest_finish, latest_shift, holidays)
+    (node.es_date, node.es_shift) = next_working_date_shift(node, latest_finish, latest_shift, holidays)
 
     (node.ef_date, node.ef_shift) = calc_finish_date_shift(node, node.es_date, node.es_shift, holidays)
 
     schedule_successors(node, earliest_date, holidays, nodes)
             
 #Finds the next working shift for the node, not including the date/shift that is passed in
-def find_next_working_date_shift(node, prior_date, prior_shift, holidays):
+#TODO This incorrectly assumes that the job will have the same work week as its predecessors.
+    #The latest finish predecessors for this job could be a 27, ending day shift on a Saturday, 
+    #while this job is a 25. This algorithm would return Saturday swing shift, when it should return Monday day shift.
+def next_working_date_shift(node, prior_date, prior_shift, holidays):
     #print (dateutil.parser.parse("1/2/24").weekday())
-
-    if prior_shift >= 3:
-        prior_shift = 1
-        next_date = prior_date + timedelta(days = 5)
-    else:
-        next_shift = prior_shift + 1
+    cc_workdays = node.cal_code % 10
+    cc_workshifts = node.cal_code // 10
+    
+    if prior_shift < cc_workshifts:
+        return prior_date, prior_shift + 1
+    
+    prior_shift = 1
+    
+    # if not able to, move to the first working day
+    while holidays.is_holiday(prior_date, node.cal_code) or not prior_date.weekday() < cc_workshifts:
+        prior_date = prior_date + timedelta(days = 1)
 
     return prior_date, prior_shift
 
@@ -55,10 +64,34 @@ def calc_finish_date_shift(node, start_date, start_shift, holidays):
     min_days = timedelta(days = min_days)
 
     finish_date = start_date + min_days
+    
+    finish_date = start_date + min_days
+    if finish_date > start_date:
+        finish_shift = 1
+    else:
+        finish_shift = start_shift
 
     #TODO Keep incrementing the EF date forward until the DU between ES and EF equals RDU
+    while du_between_workshifts(start_date, start_shift, finish_date, finish_shift, node.cal_code, holidays) < node.rdu:
+        #TODO move to next shift
+        break
 
     return (finish_date, start_shift)
+
+def du_between_workshifts(start_date, start_shift, finish_date, finish_shift, cal_code, holidays):
+    #TODO Need to make sure that X0 cal_codes are handled here or somewhere else
+    shifts_per_day = cal_code // 10
+    days_per_week = cal_code % 10
+    
+    num_days = (finish_date - start_date).days
+    num_wkends = num_days // 7
+    if start_date.weekday() > finish_date.weekday():
+        num_wkends = num_wkends + 1
+    
+    working_days = num_days + 1 - num_wkends * (7 - days_per_week)
+    
+    #TODO Does this work when the start and finish dates are the same, or adjacent?
+    return (working_days - 2) * shifts_per_day + shifts_per_day - start_shift + 1 + finish_shift
     
 def schedule_successors(node, earliest_date, holidays, nodes):
     for n in node.successors:
@@ -66,10 +99,7 @@ def schedule_successors(node, earliest_date, holidays, nodes):
             schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
         else:
             nodes[n].decr_unsched_pred_count()
-
-print(date.today())
-print(MINYEAR)
-
+            
 ID_COL = 1
 RDU_COL = 4
 PS_COL = 5
@@ -129,11 +159,12 @@ with open(links_file, newline='') as csvfile:
         
 #test_clear_nodes(nodes)
 
-#TODO Create holiday manager
+holidays = Holiday_Handler(2020, 2030)
+start_date = dateutil.parser.parse("10/17/2023").date()
 
 for n in nodes:
     if nodes[n].unsched_pred_count == 0:
-        schedule_forward_pass(nodes[n], date.today(), [], nodes)
+        schedule_forward_pass(nodes[n], start_date, holidays, nodes)
         
 for n in nodes:
     print(nodes[n])
