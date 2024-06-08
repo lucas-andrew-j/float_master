@@ -42,6 +42,17 @@ class Holiday_Handler:
         else:
             raise Exception("Attempted to add year to holidays that is not adjacent to the lowest or highest current years")
     
+    def is_holiday(self, date, cal_code):
+        result = date in self.holiday_set
+        
+        if cal_code % 10 == 7:
+            result = result and date in self.closure_sundays_set
+            
+        if cal_code % 10 >= 6:
+            result = result and date in self.closure_saturdays_set
+        
+        return result
+    
     # Returns the number of holidays between the two given dates (including either date if they are holidays)
     def count_holidays_between(self, start_date, finish_date, cal_code):
         start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.holiday_arr)
@@ -49,7 +60,6 @@ class Holiday_Handler:
         
         count = finish_index - start_index + 1
         
-        # TODO Handle saturdays and sundays for 6 and 7 cal codes
         if cal_code % 10 == 7:
             start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.closure_sundays_arr)
             finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.closure_sundays_arr)
@@ -172,10 +182,6 @@ class Holiday_Handler:
                     current_date
             
             current_date = current_date + timedelta(days = 1)
-        
-        #for 12/31 of the same year
-            #if it's not already in the holiday set, add it to the holiday set and array
-            #but add it to the appropriate weekend closure set/array if it's on a Saturday or Sunday
         
     @staticmethod
     def __nearest_weekend_day(date):
