@@ -3,9 +3,6 @@ from shift_converter import *
 from datetime import timedelta
 
 class Node:
-    f = open("log.txt", "a")
-    f.write("\n###### START OF NEW RUN #######\n")
-    
     def __init__(self, name, rdu, cal_code):
         self.name = name
         self.rdu = rdu
@@ -43,7 +40,7 @@ class Node:
         
     # ps = early_start
     def set_ps_with_time(self, date, time):
-        self.ps_date = date
+        self.ps_date = dateutil.parser.parse(date).date()
         self.ps_shift = convert_start_to_shift(time)
     
     def get_ps_date(self):
@@ -54,11 +51,11 @@ class Node:
     
     # as = actual_start
     def set_as(self, date, shift):
-        self.as_date = date
+        self.as_date = dateutil.parser.parse(date).date()
         self.as_shift = shift
         
     def set_as_with_time(self, date, time):
-        self.as_date = date
+        self.as_date = dateutil.parser.parse(date).date()
         self.as_shift = convert_start_to_shift(time)
     
     def get_as_date(self):
@@ -69,11 +66,11 @@ class Node:
     
     # af = actual_finish
     def set_af(self, date, shift):
-        self.af_date = date
+        self.af_date = dateutil.parser.parse(date).date()
         self.af_shift = shift
         
     def set_af_with_time(self, date, time):
-        self.af_date = date
+        self.af_date = dateutil.parser.parse(date).date()
         self.af_shift = convert_end_to_shift(time)
     
     def get_af_date(self):
@@ -84,11 +81,11 @@ class Node:
         
     # es = early_start
     def set_es(self, date, shift):
-        self.es_date = date
+        self.es_date = dateutil.parser.parse(date).date()
         self.es_shift = shift
         
     def set_es_with_time(self, date, time):
-        self.es_date = date
+        self.es_date = dateutil.parser.parse(date).date()
         self.es_shift = convert_start_to_shift(time)
     
     def get_es_date(self):
@@ -99,11 +96,11 @@ class Node:
     
     # ef = early_finish
     def set_ef(self, date, shift):
-        self.ef_date = date
+        self.ef_date = dateutil.parser.parse(date).date()
         self.ef_shift = shift
         
     def set_ef_with_time(self, date, time):
-        self.ef_date = date
+        self.ef_date = dateutil.parser.parse(date).date()
         self.ef_shift = convert_end_to_shift(time)
     
     def get_ef_date(self):
@@ -114,11 +111,11 @@ class Node:
     
     # ls = late_start
     def set_ls(self, date, shift):
-        self.ls_date = date
+        self.ls_date = dateutil.parser.parse(date).date()
         self.ls_shift = shift
         
     def set_ls(self, date, time):
-        self.ls_date = date
+        self.ls_date = dateutil.parser.parse(date).date()
         self.ls_shift = convert_start_to_shift(time)
     
     def get_ls_date(self):
@@ -129,11 +126,11 @@ class Node:
     
     # lf = late_finish
     def set_lf(self, date, shift):
-        self.lf_date = date
+        self.lf_date = dateutil.parser.parse(date).date()
         self.lf_shift = shift
         
     def set_lf(self, date, time):
-        self.lf_date = date
+        self.lf_date = dateutil.parser.parse(date).date()
         self.lf_shift = convert_end_to_shift(time)
     
     def get_lf_date(self):
@@ -144,7 +141,7 @@ class Node:
     
     # ss = scheduled_start
     def set_ss_with_time(self, date, time):
-        self.ss_date = date
+        self.ss_date = dateutil.parser.parse(date).date()
         self.ss_shift = convert_start_to_shift(time)
     
     def get_ss_date(self):

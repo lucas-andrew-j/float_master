@@ -4,8 +4,116 @@ from shift_converter import *
 from datetime import *
 from holiday_handler import *
 
+ID_COL = 1
+RDU_COL = 4
+PS_COL = 5
+CALNUM_COL = 9
+AS_COL = 10
+AF_COL = 11
+ES_COL = 12
+EF_COL = 13
+LS_COL = 14
+SS_COL = 23
+
+DATE_COLON_INDEX = 11
+
+fw = open("log.txt", "a")
+fw.write("\n###### START OF NEW RUN #######\n")
+
+def main():
+    #TODO Get file names from a variables file that will not be version controlled.
+    fr = open("variables.txt", "r")
+    nodes_file = fr.readline().strip()
+    links_file = fr.readline().strip()
+
+    nodes = {}
+    
+    print('Scraping nodes')
+    with open(nodes_file, newline='') as csvfile:
+        file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        next(file_reader)
+        row_num = 1
+
+        nodes = {}
+
+        for row in file_reader:
+            #print(', '.join(row))
+            new_node = node.Node(row[ID_COL], int(row[RDU_COL]), int(row[CALNUM_COL]))
+
+            #TODO Add the rest of the fields to new_node if they exist
+            if row[ES_COL] != '':
+                date_time_parts = row[ES_COL].split(':')
+                new_node.set_es_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[EF_COL] != '':
+                date_time_parts = row[EF_COL].split(':')
+                new_node.set_ef_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AS_COL] != '':
+                date_time_parts = row[AS_COL].split(':')
+                new_node.set_as_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AF_COL] != '':
+                date_time_parts = row[AF_COL].split(':')
+                new_node.set_af_with_time(date_time_parts[0], date_time_parts[1])
+            
+            if row[PS_COL] != '':
+                date_time_parts = row[PS_COL].split(':')
+                new_node.set_ps_with_time(date_time_parts[0], date_time_parts[1])
+
+            if row[SS_COL] != '':
+                date_time_parts = row[SS_COL].split(':')
+                new_node.set_ss_with_time(date_time_parts[0], date_time_parts[1])
+
+            #print(row[AS_COL][DATE_COLON_INDEX + 1:])
+            #convert_start_to_shift(row[AS_COL][DATE_COLON_INDEX + 1:])
+            nodes[row[1]] = new_node
+
+            #if row_num == 100:
+            #    break
+            #else:
+            #    row_num = row_num + 1
+
+    print('Linking nodes')
+    with open(links_file, newline='') as csvfile:
+        file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        next(file_reader)
+
+        for row in file_reader:
+            # TODO Need to change these to also pass booleans indicating if the predecessor is already finished.
+            # Don't want to count predecessors are unscheduled if they are already complete.
+            nodes[row[0]].add_succ(row[1])
+            nodes[row[1]].add_pred(row[0])
+
+    #test_clear_nodes(nodes)
+
+    holidays = Holiday_Handler(2020, 2030)
+    start_date = dateutil.parser.parse("10/17/2023").date()
+    
+    # TODO Need to go thorugh all the nodes and calculate finish dates for the ones that have a start date already.
+    print('Calculating finishes for started nodes')
+    for n in nodes:
+        if nodes[n].as_date != '' and nodes[n].af_date == '':
+            calc_finish_date_shift(nodes[n], nodes[n].es_date, nodes[n].es_shift, holidays)
+            fw.write('Calculating finish date for %s\n' % (nodes[n].name))
+    
+    print('Performing forward pass')
+    for n in nodes:
+        if nodes[n].unsched_pred_count == 0:
+            # TODO When I have verified that the forward pass is correct, this will be removed if it takes any
+            # considerable time. If it's really fast, it would be good to still include this here for comparing
+            # with the values that we get from the Concerto export.
+            schedule_forward_pass(nodes[n], start_date, holidays, nodes)
+
+    for n in nodes:
+        fw.write('%s\n' % (nodes[n]))
+        if nodes[n].forward_scheduled == False:
+            fw.write("Unscheduled node: %s\n" % (nodes[n]))
+            
+    print('Complete')
+
 def schedule_forward_pass(node, earliest_date, holidays, nodes):
-    node.f.write("Scheduling %s\n" % (node.name))
+    fw.write("Scheduling %s\n" % (node.name))
     node.forward_scheduled = True
     #TODO Schedule this node
 
@@ -21,7 +129,7 @@ def schedule_forward_pass(node, earliest_date, holidays, nodes):
         elif nodes[n].ef_date == latest_finish:
             latest_shift = max(latest_shift, nodes[n].es_shift)
 
-    #TODO Set the ES of this job to the first working shift after the date found in the previous step
+    #TODO Compare the calculated ES with the ES that we got from the Concerto export
     (node.es_date, node.es_shift) = next_working_date_shift(node, latest_finish, latest_shift, holidays)
 
     (node.ef_date, node.ef_shift) = calc_finish_date_shift(node, node.es_date, node.es_shift, holidays)
@@ -99,74 +207,5 @@ def schedule_successors(node, earliest_date, holidays, nodes):
             schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
         else:
             nodes[n].decr_unsched_pred_count()
-            
-ID_COL = 1
-RDU_COL = 4
-PS_COL = 5
-CALNUM_COL = 9
-AS_COL = 10
-AF_COL = 11
-ES_COL = 12
-EF_COL = 13
-LS_COL = 14
-SS_COL = 23
 
-DATE_COLON_INDEX = 11
-
-#TODO Get file names from a variables file that will not be version controlled.
-f = open("variables.txt", "r")
-nodes_file = f.readline().strip()
-links_file = f.readline().strip()
-
-nodes = {}
-
-with open(nodes_file, newline='') as csvfile:
-    file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    next(file_reader)
-    row_num = 1
-    
-    nodes = {}
-    
-    for row in file_reader:
-        #print(', '.join(row))
-        new_node = node.Node(row[ID_COL], int(row[RDU_COL]), int(row[CALNUM_COL]))
-        
-        #TODO Add the rest of the fields to new_node if they exist
-        if row[PS_COL] != '':
-            date_time_parts = row[PS_COL].split(':')
-            new_node.set_ps_with_time(date_time_parts[0], date_time_parts[1])
-            
-        if row[SS_COL] != '':
-            date_time_parts = row[SS_COL].split(':')
-            new_node.set_ss_with_time(date_time_parts[0], date_time_parts[1])
-        
-        #print(row[AS_COL][DATE_COLON_INDEX + 1:])
-        #convert_start_to_shift(row[AS_COL][DATE_COLON_INDEX + 1:])
-        nodes[row[1]] = new_node
-        
-        #if row_num == 100:
-        #    break
-        #else:
-        #    row_num = row_num + 1
-        
-with open(links_file, newline='') as csvfile:
-    file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    next(file_reader)
-    
-    for row in file_reader:
-        nodes[row[0]].add_succ(row[1])
-        nodes[row[1]].add_pred(row[0])
-        
-#test_clear_nodes(nodes)
-
-holidays = Holiday_Handler(2020, 2030)
-start_date = dateutil.parser.parse("10/17/2023").date()
-
-for n in nodes:
-    if nodes[n].unsched_pred_count == 0:
-        schedule_forward_pass(nodes[n], start_date, holidays, nodes)
-        
-for n in nodes:
-    print(nodes[n])
-    if nodes[n].forward_scheduled == False:
-        print("Unscheduled node: %s" % (nodes[n]))
+main()
