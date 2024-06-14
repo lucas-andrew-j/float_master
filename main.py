@@ -56,6 +56,7 @@ def main():
             if row[AF_COL] != '':
                 date_time_parts = row[AF_COL].split(':')
                 new_node.set_af_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_fp_done(True)
             
             if row[PS_COL] != '':
                 date_time_parts = row[PS_COL].split(':')
@@ -82,8 +83,8 @@ def main():
         for row in file_reader:
             # TODO Need to change these to also pass booleans indicating if the predecessor is already finished.
             # Don't want to count predecessors are unscheduled if they are already complete.
-            nodes[row[0]].add_succ(row[1])
-            nodes[row[1]].add_pred(row[0])
+            nodes[row[0]].add_succ(row[1], nodes[row[1]].af_date != '')
+            nodes[row[1]].add_pred(row[0], nodes[row[0]].af_date != '')
 
     #test_clear_nodes(nodes)
 
@@ -95,11 +96,12 @@ def main():
     for n in nodes:
         if nodes[n].as_date != '' and nodes[n].af_date == '':
             calc_finish_date_shift(nodes[n], nodes[n].es_date, nodes[n].es_shift, holidays)
+            nodes[n].set_fp_done(True)
             fw.write('Calculating finish date for %s\n' % (nodes[n].name))
     
     print('Performing forward pass')
     for n in nodes:
-        if nodes[n].unsched_pred_count == 0:
+        if nodes[n].unsched_pred_count == 0 and nodes[n].get_fp_done() == False:
             # TODO When I have verified that the forward pass is correct, this will be removed if it takes any
             # considerable time. If it's really fast, it would be good to still include this here for comparing
             # with the values that we get from the Concerto export.
@@ -107,7 +109,7 @@ def main():
 
     for n in nodes:
         fw.write('%s\n' % (nodes[n]))
-        if nodes[n].forward_scheduled == False:
+        if nodes[n].get_fp_done() == False:
             fw.write("Unscheduled node: %s\n" % (nodes[n]))
             
     print('Complete')
@@ -205,7 +207,6 @@ def schedule_successors(node, earliest_date, holidays, nodes):
     for n in node.successors:
         if nodes[n].unsched_pred_count == 1:
             schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
-        else:
-            nodes[n].decr_unsched_pred_count()
+        nodes[n].decr_unsched_pred_count()
 
 main()

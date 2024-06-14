@@ -151,10 +151,10 @@ class Node:
         return self.ss_shift
     
     def set_fp_done(self, status):
-        self.fp_done = status
+        self.forward_scheduled = status
     
     def get_fp_done(self):
-        return self.fp_done
+        return self.forward_scheduled
     
     def set_bp_done(self, status):
         self.bp_done = status
@@ -162,16 +162,18 @@ class Node:
     def get_bp_done(self):
         return self.bp_done
        
-    def add_pred(self, predecessor):
+    def add_pred(self, predecessor, pred_complete):
         self.predecessors.append(predecessor)
-        self.unsched_pred_count = self.unsched_pred_count + 1
+        if not pred_complete:
+            self.unsched_pred_count = self.unsched_pred_count + 1
        
     def decr_unsched_pred_count(self):
         self.unsched_pred_count = self.unsched_pred_count - 1
     
-    def add_succ(self, successor):
+    def add_succ(self, successor, succ_complete):
         self.successors.append(successor)
-        self.unsched_succ_count = self.unsched_succ_count + 1
+        if not succ_complete:
+            self.unsched_succ_count = self.unsched_succ_count + 1
     
     def decr_unsched_succ_count(self):
         self.unsched_succ_count = self.unsched_succ_count - 1
