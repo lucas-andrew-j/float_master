@@ -81,8 +81,6 @@ def main():
         next(file_reader)
 
         for row in file_reader:
-            # TODO Need to change these to also pass booleans indicating if the predecessor is already finished.
-            # Don't want to count predecessors are unscheduled if they are already complete.
             nodes[row[0]].add_succ(row[1], nodes[row[1]].af_date != '')
             nodes[row[1]].add_pred(row[0], nodes[row[0]].af_date != '')
 
@@ -93,11 +91,28 @@ def main():
     
     # TODO Need to go thorugh all the nodes and calculate finish dates for the ones that have a start date already.
     print('Calculating finishes for started nodes')
+    mismatch_found = 0
     for n in nodes:
         if nodes[n].as_date != '' and nodes[n].af_date == '':
-            calc_finish_date_shift(nodes[n], nodes[n].es_date, nodes[n].es_shift, holidays)
+            (ef_date, ef_shift) = calc_finish_date_shift(nodes[n], nodes[n].es_date, nodes[n].es_shift, holidays)
+            if mismatch_found > -1:
+                if nodes[n].ef_date != ef_date:
+                    fw.write("Mismatch between early finish dates: %s\n" % (nodes[n].name))
+                    fw.write("\tCalculated EF Date:\t%s\n" % (ef_date))
+                    fw.write("\tConcerto EF Date:\t%s\n" % (nodes[n].ef_date))
+                    fw.write("\tConcerto ES Date:\t%s\n" % (nodes[n].es_date))
+                    fw.write("\tConcerto RDU:\t\t%s\n" % (nodes[n].rdu))
+                    fw.write("\tConcerto Cal Code:\t%s\n" % (nodes[n].cal_code))
+                    mismatch_found = mismatch_found + 1
+                if nodes[n].ef_shift != ef_shift:
+                    fw.write("Mismatch between early finish shifts: %s\n" % (nodes[n].name))
+                    fw.write("\tCalculated EF Date:\t%s\n" % (ef_shift))
+                    fw.write("\tConcerto EF Date:\t%s\n" % (nodes[n].ef_shift))
+                    mismatch_found = mismatch_found + 1
+            (nodes[n].ef_date, nodes[n].ef_shift) = (ef_date, ef_shift)
             nodes[n].set_fp_done(True)
             fw.write('Calculating finish date for %s\n' % (nodes[n].name))
+    print('%d finish dates incorrectly calculated' % (mismatch_found))
     
     print('Performing forward pass')
     for n in nodes:
@@ -171,7 +186,7 @@ def calc_finish_date_shift(node, start_date, start_shift, holidays):
     else:
         min_days = min_working_days
 
-    min_days = timedelta(days = min_days)
+    min_days = timedelta(days = min_days - 1)
 
     finish_date = start_date + min_days
     
