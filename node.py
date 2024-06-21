@@ -55,8 +55,11 @@ class Node:
         self.as_shift = shift
         
     def set_as_with_time(self, date, time):
-        self.as_date = dateutil.parser.parse(date).date()
         self.as_shift = convert_start_to_shift(time)
+        if self.as_shift == 3:
+            self.as_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.as_date = dateutil.parser.parse(date).date()
     
     def get_as_date(self):
         return self.as_date
@@ -85,8 +88,11 @@ class Node:
         self.es_shift = shift
         
     def set_es_with_time(self, date, time):
-        self.es_date = dateutil.parser.parse(date).date()
         self.es_shift = convert_start_to_shift(time)
+        if self.es_shift == 3:
+            self.es_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.es_date = dateutil.parser.parse(date).date()
     
     def get_es_date(self):
         return self.es_date
@@ -113,10 +119,6 @@ class Node:
     def set_ls(self, date, shift):
         self.ls_date = dateutil.parser.parse(date).date()
         self.ls_shift = shift
-        
-    def set_ls(self, date, time):
-        self.ls_date = dateutil.parser.parse(date).date()
-        self.ls_shift = convert_start_to_shift(time)
     
     def get_ls_date(self):
         return self.ls_date
@@ -141,8 +143,11 @@ class Node:
     
     # ss = scheduled_start
     def set_ss_with_time(self, date, time):
-        self.ss_date = dateutil.parser.parse(date).date()
         self.ss_shift = convert_start_to_shift(time)
+        if self.ss_shift == 3:
+            self.es_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.es_date = dateutil.parser.parse(date).date()
     
     def get_ss_date(self):
         return self.ss_date

@@ -43,6 +43,9 @@ class Holiday_Handler:
             raise Exception("Attempted to add year to holidays that is not adjacent to the lowest or highest current years")
     
     def is_holiday(self, date, cal_code):
+        if cal_code % 10 == 0:
+            return False
+        
         result = date in self.holiday_set
         
         if cal_code % 10 == 7:
