@@ -17,11 +17,12 @@ SS_COL = 23
 
 DATE_COLON_INDEX = 11
 
+mismatch_found = 0
+
 fw = open('log.txt', 'a')
 fw.write('\n###### START OF NEW RUN #######\n')
 
 def main():
-    #TODO Get file names from a variables file that will not be version controlled.
     fr = open('variables.txt', 'r')
     nodes_file = fr.readline().strip()
     links_file = fr.readline().strip()
@@ -89,44 +90,6 @@ def main():
     holidays = Holiday_Handler(2020, 2030)
     start_date = dateutil.parser.parse('10/17/2023').date()
     
-    # TODO Need to go thorugh all the nodes and calculate finish dates for the ones that have a start date already.
-    print('Calculating finishes for started nodes')
-    mismatch_found = 0
-    for n in nodes:
-        if nodes[n].as_date != '' and nodes[n].af_date == '':
-            fw.write('Adjusting ES dates from Concerto that are not working days.\n')
-            adjust_concerto_es_date(nodes[n], holidays)
-            
-            fw.write('Calculating finish date for %s\n' % (nodes[n].name))
-            (ef_date, ef_shift) = calc_finish_date_shift(nodes[n], nodes[n].es_date, nodes[n].es_shift, holidays)
-            
-            # TODO Remove this and then check for the mismatch between jobs that span the closure
-            if nodes[n].ef_date.strftime('%y') == nodes[n].es_date.strftime('%y'):
-                if nodes[n].ef_date != ef_date:
-                    fw.write('Mismatch between early finish dates: %s\n' % (nodes[n].name))
-                    fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
-                    fw.write('\tConcerto EF Date:\t%s\n' % (nodes[n].ef_date))
-                    fw.write('\tConcerto ES Shift:\t%s\n' % (nodes[n].es_shift))
-                    fw.write('\tConcerto ES Date:\t%s\n' % (nodes[n].es_date))
-                    fw.write('\tConcerto RDU:\t\t%s\n' % (nodes[n].rdu))
-                    fw.write('\tConcerto Cal Code:\t%s\n' % (nodes[n].cal_code))
-                    mismatch_found = mismatch_found + 1
-                if nodes[n].ef_shift != ef_shift:
-                    fw.write('Mismatch between early finish shifts: %s\n' % (nodes[n].name))
-                    fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
-                    fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
-                    fw.write('\tConcerto EF Shift:\t%s\n' % (nodes[n].ef_shift))
-                    fw.write('\tConcerto EF Date:\t%s\n' % (nodes[n].ef_date))
-                    fw.write('\tConcerto ES Shift:\t%s\n' % (nodes[n].es_shift))
-                    fw.write('\tConcerto ES Date:\t%s\n' % (nodes[n].es_date))
-                    fw.write('\tConcerto RDU:\t\t%s\n' % (nodes[n].rdu))
-                    fw.write('\tConcerto Cal Code:\t%s\n' % (nodes[n].cal_code))
-                    mismatch_found = mismatch_found + 1
-            (nodes[n].ef_date, nodes[n].ef_shift) = (ef_date, ef_shift)
-            nodes[n].set_fp_done(True)
-            
-    print('%d finish dates incorrectly calculated' % (mismatch_found))
-    
     print('Performing forward pass')
     for n in nodes:
         if nodes[n].unsched_pred_count == 0 and nodes[n].get_fp_done() == False:
@@ -139,7 +102,9 @@ def main():
         fw.write('%s\n' % (nodes[n]))
         if nodes[n].get_fp_done() == False:
             fw.write('Unscheduled node: %s\n' % (nodes[n]))
-            
+    
+    global mismatch_found
+    print('Mismatches found: %d' % (mismatch_found))
     print('Complete')
 
 def schedule_forward_pass(node, earliest_date, holidays, nodes):
@@ -159,9 +124,35 @@ def schedule_forward_pass(node, earliest_date, holidays, nodes):
         elif nodes[n].ef_date == latest_finish:
             latest_shift = max(latest_shift, nodes[n].es_shift)
 
-    (node.es_date, node.es_shift) = next_working_date_shift(node, latest_finish, latest_shift, holidays)
+    (es_date, es_shift) = next_working_date_shift(node, latest_finish, latest_shift, holidays)
 
-    (node.ef_date, node.ef_shift) = calc_finish_date_shift(node, node.es_date, node.es_shift, holidays)
+    (ef_date, ef_shift) = calc_finish_date_shift(node, es_date, es_shift, holidays)
+    global mismatch_found
+    if node.ef_date.strftime('%y') == node.es_date.strftime('%y'):
+        if node.ef_date != ef_date:
+            fw.write('Mismatch between early finish dates: %s\n' % (node.name))
+            fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
+            fw.write('\tConcerto EF Date:\t%s\n' % (node.ef_date))
+            fw.write('\tConcerto ES Shift:\t%s\n' % (node.es_shift))
+            fw.write('\tConcerto ES Date:\t%s\n' % (node.es_date))
+            fw.write('\tConcerto RDU:\t\t%s\n' % (node.rdu))
+            fw.write('\tConcerto Cal Code:\t%s\n' % (node.cal_code))
+            mismatch_found = mismatch_found + 1
+        if node.ef_shift != ef_shift:
+            fw.write('Mismatch between early finish shifts: %s\n' % (node.name))
+            fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
+            fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
+            fw.write('\tConcerto EF Shift:\t%s\n' % (node.ef_shift))
+            fw.write('\tConcerto EF Date:\t%s\n' % (node.ef_date))
+            fw.write('\tConcerto ES Shift:\t%s\n' % (node.es_shift))
+            fw.write('\tConcerto ES Date:\t%s\n' % (node.es_date))
+            fw.write('\tConcerto RDU:\t\t%s\n' % (node.rdu))
+            fw.write('\tConcerto Cal Code:\t%s\n' % (node.cal_code))
+            mismatch_found = mismatch_found + 1
+    node.es_date = es_date
+    node.es_shift = es_shift
+    node.ef_date = ef_date
+    node.ef_shift = ef_shift
 
     schedule_successors(node, earliest_date, holidays, nodes)
             
