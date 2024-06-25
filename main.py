@@ -107,16 +107,16 @@ def main():
     print('Mismatches found: %d' % (mismatch_found))
     print('Complete')
 
-def schedule_forward_pass(node, earliest_date, holidays, nodes):
-    fw.write('Scheduling %s\n' % (node.name))
-    node.forward_scheduled = True
+def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
+    fw.write('Scheduling %s\n' % (this_node.name))
+    this_node.forward_scheduled = True
     
-    if node.ps_date == '':
+    if this_node.ps_date == '':
         latest_finish = earliest_date
     else:
-        latest_finish = earliest_date if earliest_date > node.ps_date else node.ps_date
+        latest_finish = earliest_date if earliest_date > this_node.ps_date else this_node.ps_date
     latest_shift = 1
-    for n in node.predecessors:
+    for n in this_node.predecessors:
         if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
             latest_finish = nodes[n].af_date
             latest_shift = nodes[n].af_shift
@@ -126,46 +126,47 @@ def schedule_forward_pass(node, earliest_date, holidays, nodes):
         elif nodes[n].ef_date == latest_finish:
             latest_shift = max(latest_shift, nodes[n].es_shift)
 
-    (es_date, es_shift) = next_working_date_shift(node, latest_finish, latest_shift, holidays)
+    (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
 
-    (ef_date, ef_shift) = calc_finish_date_shift(node, es_date, es_shift, holidays)
+    (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     global mismatch_found
-    if node.ef_date.strftime('%y') == node.es_date.strftime('%y'):
-        if node.ef_date != ef_date:
-            fw.write('Mismatch between early finish dates: %s\n' % (node.name))
+    if this_node.ef_date.strftime('%y') == this_node.es_date.strftime('%y'):
+        if this_node.ef_date != ef_date:
+            fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
             fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
-            fw.write('\tConcerto EF Date:\t%s\n' % (node.ef_date))
-            fw.write('\tConcerto ES Shift:\t%s\n' % (node.es_shift))
-            fw.write('\tConcerto ES Date:\t%s\n' % (node.es_date))
-            fw.write('\tConcerto RDU:\t\t%s\n' % (node.rdu))
-            fw.write('\tConcerto Cal Code:\t%s\n' % (node.cal_code))
+            fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
+            fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+            fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+            fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+            fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
+            fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
             mismatch_found = mismatch_found + 1
-        if node.ef_shift != ef_shift:
-            fw.write('Mismatch between early finish shifts: %s\n' % (node.name))
+        if this_node.ef_shift != ef_shift:
+            fw.write('Mismatch between early finish shifts: %s\n' % (this_node.name))
             fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
             fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
-            fw.write('\tConcerto EF Shift:\t%s\n' % (node.ef_shift))
-            fw.write('\tConcerto EF Date:\t%s\n' % (node.ef_date))
-            fw.write('\tConcerto ES Shift:\t%s\n' % (node.es_shift))
-            fw.write('\tConcerto ES Date:\t%s\n' % (node.es_date))
-            fw.write('\tConcerto RDU:\t\t%s\n' % (node.rdu))
-            fw.write('\tConcerto Cal Code:\t%s\n' % (node.cal_code))
+            fw.write('\tConcerto EF Shift:\t%s\n' % (this_node.ef_shift))
+            fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
+            fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+            fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+            fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
+            fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
             mismatch_found = mismatch_found + 1
-    node.es_date = es_date
-    node.es_shift = es_shift
-    node.ef_date = ef_date
-    node.ef_shift = ef_shift
+    this_node.es_date = es_date
+    this_node.es_shift = es_shift
+    this_node.ef_date = ef_date
+    this_node.ef_shift = ef_shift
 
-    schedule_successors(node, earliest_date, holidays, nodes)
+    schedule_successors(this_node, earliest_date, holidays, nodes)
             
 #Finds the next working shift for the node, not including the date/shift that is passed in
 #TODO This incorrectly assumes that the job will have the same work week as its predecessors.
     #The latest finish predecessors for this job could be a 27, ending day shift on a Saturday, 
     #while this job is a 25. This algorithm would return Saturday swing shift, when it should return Monday day shift.
-def next_working_date_shift(node, prior_date, prior_shift, holidays):
+def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
     #print (dateutil.parser.parse('1/2/24').weekday())
-    cc_workdays = node.cal_code % 10
-    cc_workshifts = node.cal_code // 10
+    cc_workdays = this_node.cal_code % 10
+    cc_workshifts = this_node.cal_code // 10
     
     if prior_date.weekday() < cc_workdays and prior_shift < cc_workshifts:
         return prior_date, prior_shift + 1
@@ -179,24 +180,24 @@ def next_working_date_shift(node, prior_date, prior_shift, holidays):
     prior_date = prior_date + timedelta(days = 1)
     
     # if not able to, move to the first working day
-    while holidays.is_holiday(prior_date, node.cal_code) or not prior_date.weekday() < cc_workdays:
+    while holidays.is_holiday(prior_date, this_node.cal_code) or not prior_date.weekday() < cc_workdays:
         prior_date = prior_date + timedelta(days = 1)
 
     return prior_date, prior_shift
 
-def adjust_concerto_es_date(node, holidays):
-    if node.cal_code % 10 != 0:
-        while holidays.is_holiday(node.es_date, node.cal_code) or node.es_date.weekday() >= node.cal_code % 10:
-            node.es_date = node.es_date + timedelta(days = 1)
-            node.es_shift = 1
+def adjust_concerto_es_date(this_node, holidays):
+    if this_node.cal_code % 10 != 0:
+        while holidays.is_holiday(this_node.es_date, this_node.cal_code) or this_node.es_date.weekday() >= this_node.cal_code % 10:
+            this_node.es_date = this_node.es_date + timedelta(days = 1)
+            this_node.es_shift = 1
 
-def calc_finish_date_shift(node, start_date, start_shift, holidays):
+def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
     #TODO Calculate the minimum date that the early finish could be (based on cal_code)
-    shifts_per_day = node.cal_code // 10
-    days_per_week = node.cal_code % 10
+    shifts_per_day = this_node.cal_code // 10
+    days_per_week = this_node.cal_code % 10
     weekend_days_per_week = 7 - days_per_week
 
-    min_working_days = node.rdu // shifts_per_day
+    min_working_days = this_node.rdu // shifts_per_day
     if days_per_week != 0 and days_per_week != 7:
         min_work_weeks = min_working_days // days_per_week
         min_days = min_working_days + min_work_weeks * weekend_days_per_week
@@ -214,16 +215,16 @@ def calc_finish_date_shift(node, start_date, start_shift, holidays):
         finish_shift = start_shift
        
     fw.write('Date before starting loop to find first workday that is non-holiday: %s\n' % (finish_date))
-    while holidays.is_holiday(finish_date, node.cal_code) or (finish_date.weekday() >= days_per_week and days_per_week != 0):
+    while holidays.is_holiday(finish_date, this_node.cal_code) or (finish_date.weekday() >= days_per_week and days_per_week != 0):
         finish_date = finish_date + timedelta(days = 1)
 
     #TODO Keep incrementing the EF date forward until the DU between ES and EF equals RDU
     i = 0
-    while du_between_workshifts(start_date, start_shift, finish_date, finish_shift, node.cal_code, holidays) < node.rdu:
-        (finish_date, finish_shift) = next_working_date_shift(node, finish_date, finish_shift, holidays)
+    while du_between_workshifts(start_date, start_shift, finish_date, finish_shift, this_node.cal_code, holidays) < this_node.rdu:
+        (finish_date, finish_shift) = next_working_date_shift(this_node, finish_date, finish_shift, holidays)
         i = i + 1
         if i == 300:
-            print('Hit 300 iterations for %s' % (node.name))
+            print('Hit 300 iterations for %s' % (this_node.name))
             break
     return (finish_date, finish_shift)
 
@@ -264,8 +265,8 @@ def du_between_workshifts(start_date, start_shift, finish_date, finish_shift, ca
     fw.write('middle_working_shifts: %d, first_day_shifts: %d, last_day_shift: %d\n' % (middle_working_shifts, first_day_shifts, last_day_shifts))
     return middle_working_shifts + first_day_shifts + last_day_shifts - holiday_shifts
     
-def schedule_successors(node, earliest_date, holidays, nodes):
-    for n in node.successors:
+def schedule_successors(this_node, earliest_date, holidays, nodes):
+    for n in this_node.successors:
         if nodes[n].unsched_pred_count == 1:
             schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
         nodes[n].decr_unsched_pred_count()

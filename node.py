@@ -40,8 +40,11 @@ class Node:
         
     # ps = early_start
     def set_ps_with_time(self, date, time):
-        self.ps_date = dateutil.parser.parse(date).date()
         self.ps_shift = convert_start_to_shift(time)
+        if self.ps_shift == 3:
+            self.ps_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.ps_date = dateutil.parser.parse(date).date()
     
     def get_ps_date(self):
         return self.ps_date
@@ -145,9 +148,9 @@ class Node:
     def set_ss_with_time(self, date, time):
         self.ss_shift = convert_start_to_shift(time)
         if self.ss_shift == 3:
-            self.es_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+            self.ss_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
         else:
-            self.es_date = dateutil.parser.parse(date).date()
+            self.ss_date = dateutil.parser.parse(date).date()
     
     def get_ss_date(self):
         return self.ss_date
