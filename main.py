@@ -110,9 +110,11 @@ def main():
 def schedule_forward_pass(node, earliest_date, holidays, nodes):
     fw.write('Scheduling %s\n' % (node.name))
     node.forward_scheduled = True
-    #TODO Schedule this node
-
-    latest_finish = earliest_date
+    
+    if node.ps_date == '':
+        latest_finish = earliest_date
+    else:
+        latest_finish = earliest_date if earliest_date > node.ps_date else node.ps_date
     latest_shift = 1
     for n in node.predecessors:
         if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
