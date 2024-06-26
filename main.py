@@ -89,7 +89,7 @@ def main():
     #test_clear_nodes(nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('06/21/2024').date()
+    start_date = dateutil.parser.parse('06/25/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -112,8 +112,8 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     fw.write('Scheduling %s\n' % (this_node.name))
     this_node.forward_scheduled = True
     
-    latest_finish = earliest_date
-    latest_shift = 1
+    latest_finish = earliest_date - timedelta(days=1)
+    latest_shift = 3
     
     for n in this_node.predecessors:
         if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
