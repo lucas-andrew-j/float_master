@@ -4,6 +4,7 @@ from shift_converter import *
 from datetime import *
 from holiday_handler import *
 
+# TODO Find these columns dynamically. Don't want this to break each time Concerto exports are modified.
 ID_COL = 1
 RDU_COL = 4
 PS_COL = 5
@@ -13,7 +14,7 @@ AF_COL = 11
 ES_COL = 12
 EF_COL = 13
 LS_COL = 14
-SES_COL = 23
+SES_COL = 24
 
 DATE_COLON_INDEX = 11
 
@@ -141,12 +142,13 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     global mismatches_found
     if this_node.ef_date.strftime('%y') == this_node.es_date.strftime('%y'):
-        if this_node.ef_date != ef_date:
+        if this_node.ef_date != ef_date: #and this_node.es_date == es_date and this_node.es_shift == es_shift:
             fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
             fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
             fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
             fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
             fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+            fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
             fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
             fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
             fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
@@ -237,18 +239,17 @@ def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
     days_per_week = this_node.cal_code % 10
     weekend_days_per_week = 7 - days_per_week
 
-    min_working_days = this_node.rdu // shifts_per_day
-    if days_per_week != 0 and days_per_week != 7:
-        min_work_weeks = min_working_days // days_per_week
-        min_days = min_working_days + min_work_weeks * weekend_days_per_week
-    else:
+    min_working_days = (this_node.rdu) // shifts_per_day
+    
+    if days_per_week == 0 or days_per_week == 7:
         min_days = min_working_days
+    else:
+        min_work_weeks = min_working_days // days_per_week - 1
+        min_days = min_working_days + min_work_weeks * weekend_days_per_week
 
     min_days = timedelta(days = min_days - 1)
-
     finish_date = start_date + min_days
     
-    finish_date = start_date + min_days
     if finish_date > start_date:
         finish_shift = 1
     else:
@@ -258,11 +259,11 @@ def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
     while holidays.is_holiday(finish_date, this_node.cal_code) or (finish_date.weekday() >= days_per_week and days_per_week != 0):
         finish_date = finish_date + timedelta(days = 1)
 
-    #TODO Keep incrementing the EF date forward until the DU between ES and EF equals RDU
     i = 0
     while du_between_workshifts(start_date, start_shift, finish_date, finish_shift, this_node.cal_code, holidays) < this_node.rdu:
         (finish_date, finish_shift) = next_working_date_shift(this_node, finish_date, finish_shift, holidays)
         i = i + 1
+        #TODO Remove this
         if i == 300:
             print('Hit 300 iterations for %s' % (this_node.name))
             break
@@ -301,7 +302,10 @@ def du_between_workshifts(start_date, start_shift, finish_date, finish_shift, ca
         middle_working_shifts = (working_days - 2) * shifts_per_day
     first_day_shifts = shifts_per_day - start_shift + 1
     last_day_shifts = finish_shift
-    holiday_shifts = holidays.count_holidays_between(start_date, finish_date, cal_code) * shifts_per_day
+    if days_per_week != 0:
+        holiday_shifts = holidays.count_holidays_between(start_date, finish_date, cal_code) * shifts_per_day
+    else:
+        holiday_shifts = 0
     fw.write('middle_working_shifts: %d, first_day_shifts: %d, last_day_shift: %d\n' % (middle_working_shifts, first_day_shifts, last_day_shifts))
     return middle_working_shifts + first_day_shifts + last_day_shifts - holiday_shifts
     
