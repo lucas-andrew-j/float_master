@@ -4,7 +4,6 @@ from shift_converter import *
 from datetime import *
 from holiday_handler import *
 
-# TODO Find these columns dynamically. Don't want this to break each time Concerto exports are modified.
 ID_COL = 1
 RDU_COL = 4
 PS_COL = 5
@@ -15,6 +14,17 @@ ES_COL = 12
 EF_COL = 13
 LS_COL = 14
 SES_COL = 24
+
+ID_HEADER = 'PE'
+RDU_HEADER = 'RDU'
+PS_HEADER = 'PS'
+CALNUM_HEADER = 'CALNUM'
+AS_HEADER = 'AS'
+AF_HEADER = 'AF'
+ES_HEADER = 'ES'
+EF_HEADER = 'EF'
+LS_HEADER = 'LS'
+SES_HEADER = 'SES'
 
 DATE_COLON_INDEX = 11
 
@@ -33,7 +43,32 @@ def main():
     print('Scraping nodes')
     with open(nodes_file, newline='') as csvfile:
         file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        next(file_reader)
+        
+        #TODO I think we check headers here
+        header_row = next(file_reader)
+        
+        global ID_COL
+        global RDU_COL
+        global PS_COL
+        global CALNUM_COL
+        global AS_COL
+        global AF_COL
+        global ES_COL
+        global EF_COL
+        global LS_COL
+        global SES_COL
+
+        ID_COL = get_col_num(header_row, ID_HEADER)
+        RDU_COL = get_col_num(header_row, RDU_HEADER)    
+        PS_COL = get_col_num(header_row, PS_HEADER)
+        CALNUM_COL = get_col_num(header_row, CALNUM_HEADER)
+        AS_COL = get_col_num(header_row, AS_HEADER)
+        AF_COL = get_col_num(header_row, AF_HEADER)
+        ES_COL = get_col_num(header_row, ES_HEADER)
+        EF_COL = get_col_num(header_row, EF_HEADER)
+        LS_COL = get_col_num(header_row, LS_HEADER)
+        SES_COL = get_col_num(header_row, SES_HEADER)
+                             
         row_num = 1
 
         nodes = {}
@@ -107,6 +142,13 @@ def main():
     global mismatches_found
     print('Mismatches found: %d' % (mismatches_found))
     print('Complete')
+    
+def get_col_num(header_row, col_header):
+    for i in range(0, len(header_row)):
+        if header_row[i] == col_header:
+            return i
+        
+    raise Exception('Could not find a required header.')
 
 def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     fw.write('Scheduling %s\n' % (this_node.name))
@@ -130,6 +172,8 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
     #TODO Need to update to make sure that ps and ses are on a later date, or the same date with 
         # a later shift
+    #TODO Need to update the use of SES to ignore it if it makes the job go negative. PS will still
+        # be honored if it makes the job go negative.
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
