@@ -3,9 +3,10 @@ from shift_converter import *
 from datetime import timedelta
 
 class Node:
-    def __init__(self, name, rdu, cal_code):
+    def __init__(self, name, du, rdu, cal_code):
         self.name = name
         self.rdu = rdu
+        self.du = du
         self.cal_code = cal_code
         
         self.predecessors = []
@@ -34,8 +35,8 @@ class Node:
         self.lf_date = ''
         self.lf_shift = 0
         
-        self.ss_date = ''
-        self.ss_shift = 0 
+        self.ses_date = ''
+        self.ses_shift = 0 
         self.forward_scheduled = False
         
     # ps = early_start
@@ -144,19 +145,19 @@ class Node:
     def get_lf_shift(self):
         return self.lf_shift
     
-    # ss = scheduled_start
-    def set_ss_with_time(self, date, time):
-        self.ss_shift = convert_start_to_shift(time)
-        if self.ss_shift == 3:
-            self.ss_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+    # ses = scheduled_early_start
+    def set_ses_with_time(self, date, time):
+        self.ses_shift = convert_start_to_shift(time)
+        if self.ses_shift == 3:
+            self.ses_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
         else:
-            self.ss_date = dateutil.parser.parse(date).date()
+            self.ses_date = dateutil.parser.parse(date).date()
     
-    def get_ss_date(self):
-        return self.ss_date
+    def get_ses_date(self):
+        return self.ses_date
     
-    def get_ss_shift(self):
-        return self.ss_shift
+    def get_ses_shift(self):
+        return self.ses_shift
     
     def set_fp_done(self, status):
         self.forward_scheduled = status

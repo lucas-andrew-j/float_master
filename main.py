@@ -5,6 +5,7 @@ from datetime import *
 from holiday_handler import *
 
 ID_COL = 1
+DU_COL = 0
 RDU_COL = 4
 PS_COL = 5
 CALNUM_COL = 9
@@ -16,6 +17,7 @@ LS_COL = 14
 SES_COL = 24
 
 ID_HEADER = 'PE'
+DU_HEADER = 'DU'
 RDU_HEADER = 'RDU'
 PS_HEADER = 'PS'
 CALNUM_HEADER = 'CALNUM'
@@ -48,6 +50,7 @@ def main():
         header_row = next(file_reader)
         
         global ID_COL
+        global DU_COL
         global RDU_COL
         global PS_COL
         global CALNUM_COL
@@ -59,6 +62,7 @@ def main():
         global SES_COL
 
         ID_COL = get_col_num(header_row, ID_HEADER)
+        DU_COL = get_col_num(header_row, DU_HEADER)
         RDU_COL = get_col_num(header_row, RDU_HEADER)    
         PS_COL = get_col_num(header_row, PS_HEADER)
         CALNUM_COL = get_col_num(header_row, CALNUM_HEADER)
@@ -75,7 +79,7 @@ def main():
 
         for row in file_reader:
             #print(', '.join(row))
-            new_node = node.Node(row[ID_COL], int(row[RDU_COL]), int(row[CALNUM_COL]))
+            new_node = node.Node(row[ID_COL], int(row[DU_COL]), int(row[RDU_COL]), int(row[CALNUM_COL]))
 
             #TODO Add the rest of the fields to new_node if they exist
             if row[ES_COL] != '':
@@ -124,7 +128,7 @@ def main():
     #test_clear_nodes(nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('06/25/2024').date()
+    start_date = dateutil.parser.parse('06/26/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -161,7 +165,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
             latest_finish = nodes[n].af_date
             latest_shift = nodes[n].af_shift
-        elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
+        elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish and nodes[n].du != 0:
             latest_finish = nodes[n].ef_date
             latest_shift = nodes[n].ef_shift
         elif nodes[n].ef_date == latest_finish:
