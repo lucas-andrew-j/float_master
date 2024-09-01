@@ -60,10 +60,7 @@ class Node:
         
     def set_as_with_time(self, date, time):
         self.as_shift = convert_start_to_shift(time)
-        if self.as_shift == 3:
-            self.as_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
-        else:
-            self.as_date = dateutil.parser.parse(date).date()
+        self.as_date = dateutil.parser.parse(date).date()
     
     def get_as_date(self):
         return self.as_date
@@ -77,8 +74,11 @@ class Node:
         self.af_shift = shift
         
     def set_af_with_time(self, date, time):
-        self.af_date = dateutil.parser.parse(date).date()
         self.af_shift = convert_end_to_shift(time)
+        if time == "0000":
+            self.af_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.af_date = dateutil.parser.parse(date).date()
     
     def get_af_date(self):
         return self.af_date
@@ -93,10 +93,7 @@ class Node:
         
     def set_es_with_time(self, date, time):
         self.es_shift = convert_start_to_shift(time)
-        if self.es_shift == 3:
-            self.es_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
-        else:
-            self.es_date = dateutil.parser.parse(date).date()
+        self.es_date = dateutil.parser.parse(date).date()
     
     def get_es_date(self):
         return self.es_date
@@ -110,8 +107,8 @@ class Node:
         self.ef_shift = shift
         
     def set_ef_with_time(self, date, time):
-        self.ef_date = dateutil.parser.parse(date).date()
         self.ef_shift = convert_end_to_shift(time)
+        self.ef_date = dateutil.parser.parse(date).date()
     
     def get_ef_date(self):
         return self.ef_date
@@ -148,10 +145,7 @@ class Node:
     # ses = scheduled_early_start
     def set_ses_with_time(self, date, time):
         self.ses_shift = convert_start_to_shift(time)
-        if self.ses_shift == 3:
-            self.ses_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
-        else:
-            self.ses_date = dateutil.parser.parse(date).date()
+        self.ses_date = dateutil.parser.parse(date).date()
     
     def get_ses_date(self):
         return self.ses_date
@@ -188,7 +182,7 @@ class Node:
         self.unsched_succ_count = self.unsched_succ_count - 1
     
     def __str__(self):
-        return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s,\tES: %s,\tEF: %s" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count, self.es_date, self.ef_date)
+        return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s,\tES: %s, %d,\tEF: %s, %d" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count, self.es_date, self.es_shift, self.ef_date, self.ef_shift)
     
     def __repr__(self):
         return "something"

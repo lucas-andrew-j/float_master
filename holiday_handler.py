@@ -76,6 +76,11 @@ class Holiday_Handler:
         return count
             
     def __add_year(self, year):
+        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
+        if year > 2026:
+            print("Year %d bypassed." % (year))
+            return
+        
         self.__add_new_year(year)
         self.__add_mlk_holiday(year)
         self.__add_presidents_day(year)
@@ -170,8 +175,9 @@ class Holiday_Handler:
     # xmas is on Tuesday. Is this right?
     def __add_closure(self, year):
         current_date = Holiday_Handler.__get_closure_start(year)
+        end_date = Holiday_Handler.__get_closure_end(year + 1)
         
-        while current_date <= dateutil.parser.parse("12/31/%d" % year).date():
+        while current_date <= end_date: #dateutil.parser.parse("12/31/%d" % year).date():
             if current_date.weekday() == 5:
                 self.closure_saturdays_set.add(current_date)
                 self.closure_saturdays_arr.append(current_date)
@@ -207,6 +213,20 @@ class Holiday_Handler:
         xmas_holiday = dateutil.parser.parse("12/25/%d" % year).date()
         observed_holiday = Holiday_Handler.__nearest_weekend_day(xmas_holiday)
         return observed_holiday
+    
+    @staticmethod
+    def __get_closure_end(year):
+        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
+        if year > 2026:
+            return dateutil.parser.parse("12/31/%d" % (year - 1)).date()
+        
+        new_year_holiday = dateutil.parser.parse("1/1/%d" % year).date()
+        new_year_weekday = new_year_holiday.weekday()
+        
+        if new_year_weekday <= 2:
+            return new_year_holiday
+        else:
+            return new_year_holiday + timedelta(days = 6 - new_year_weekday)
     
     # Returns the index of the closest holiday that is greater than or equal to the given date
     @staticmethod
