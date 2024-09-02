@@ -177,7 +177,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
             latest_shift = pred_prev_es_shift
         elif nodes[n].ef_date == latest_finish:
             latest_shift = max(latest_shift, nodes[n].ef_shift)
-    
+              
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
@@ -255,7 +255,7 @@ def prev_date_shift(date, shift):
         return date, shift - 1
 
 # Finds the next working shift for the node, NOT including the date/shift that is passed in
-# Assumes that prior_date is a valid workday and prior_shift is a valid work shift
+# Does NOT assume that prior date is a valid workday
 def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
     #print (dateutil.parser.parse('1/2/24').weekday())
     cc_workdays = this_node.cal_code % 10
@@ -266,6 +266,8 @@ def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
         return prior_date, prior_shift + 1
     elif cc_workdays == 0:
         return prior_date + timedelta(days = 1), default_starting_shift
+    elif cc_workshifts != 3 and prior_shift == 1:
+        return prior_date, 2
     
     prior_date = prior_date + timedelta(days = 1)
     
