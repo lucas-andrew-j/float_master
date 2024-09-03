@@ -176,8 +176,8 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
             latest_finish = pred_prev_es_date
             latest_shift = pred_prev_es_shift
         elif nodes[n].ef_date == latest_finish:
-            latest_shift = max(latest_shift, nodes[n].es_shift)
-
+            latest_shift = max(latest_shift, nodes[n].ef_shift)
+    
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
@@ -195,6 +195,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
 
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
+    
     global mismatches_found
     if this_node.ef_date.strftime('%y') == this_node.es_date.strftime('%y'):
         if this_node.ef_date != ef_date: #and this_node.es_date == es_date and this_node.es_shift == es_shift:
@@ -208,7 +209,10 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
             fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
             fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
             mismatches_found = mismatches_found + 1
-        if this_node.ef_shift != ef_shift:
+            
+        # The check for du or rdu not being zero is because milestones that have an ES/PS
+        # time of 0000 sometimes end at 2359 the day before, or at 0000 on the same day.
+        if this_node.ef_shift != ef_shift and (this_node.du != 0 or this_node.rdu != 0):
             fw.write('Mismatch between early finish shifts: %s\n' % (this_node.name))
             fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
             fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))

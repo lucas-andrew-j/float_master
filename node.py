@@ -194,7 +194,7 @@ class Node:
         self.unsched_succ_count = self.unsched_succ_count - 1
     
     def __str__(self):
-        return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s,\tES: %s,\tEF: %s" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count, self.es_date, self.ef_date)
+        return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s,\tES: %s, %d,\tEF: %s, %d" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count, self.es_date, self.es_shift, self.ef_date, self.ef_shift)
     
     def __repr__(self):
         return "something"
