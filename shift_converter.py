@@ -19,9 +19,7 @@ def convert_end_to_shift(end_time):
     
     end_time = int(end_time)
     
-    if end_time == 0:
-        return 3
-    elif end_time <= 800:
+    if end_time <= 800:
         return 1
     elif end_time <= 1600:
         return 2
