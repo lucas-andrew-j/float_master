@@ -201,14 +201,14 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     
     global mismatches_found
     #if this_node.ef_date.strftime('%y') == this_node.es_date.strftime('%y'):
-    if this_node.ef_date != ef_date: #and this_node.es_date == es_date and this_node.es_shift == es_shift:
+    if this_node.ef_date != ef_date:# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 30:
         fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
+        fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+        fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+        fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
         fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
         fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
-        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
-        fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
-        fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
-        fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
         if this_node.ef_date.year - ef_date.year == 1 and mismatches_found < 1000:
@@ -219,12 +219,14 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     # time of 0000 sometimes end at 2359 the day before, or at 0000 on the same day.
     if this_node.ef_shift != ef_shift and (this_node.du != 0 or this_node.rdu != 0):
         fw.write('Mismatch between early finish shifts: %s\n' % (this_node.name))
-        fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
-        fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
-        fw.write('\tConcerto EF Shift:\t%s\n' % (this_node.ef_shift))
-        fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
-        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
         fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+        fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+        fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
+        fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
+        fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
+        fw.write('\tCalculated EF Shift:\t%s\n' % (ef_shift))
+        fw.write('\tConcerto EF Shift:\t%s\n' % (this_node.ef_shift))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
         mismatches_found = mismatches_found + 1

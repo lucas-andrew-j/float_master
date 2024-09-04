@@ -76,11 +76,6 @@ class Holiday_Handler:
         return count
             
     def __add_year(self, year):
-        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
-        if year > 2026:
-            print("Year %d bypassed." % (year))
-            return
-        
         self.__add_new_year(year)
         self.__add_mlk_holiday(year)
         self.__add_presidents_day(year)
@@ -216,10 +211,6 @@ class Holiday_Handler:
     
     @staticmethod
     def __get_closure_end(year):
-        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
-        if year > 2026:
-            return dateutil.parser.parse("12/31/%d" % (year - 1)).date()
-        
         new_year_holiday = dateutil.parser.parse("1/1/%d" % year).date()
         new_year_weekday = new_year_holiday.weekday()
         
