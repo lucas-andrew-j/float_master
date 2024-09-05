@@ -4,18 +4,6 @@ from shift_converter import *
 from datetime import *
 from holiday_handler import *
 
-ID_COL = 1
-DU_COL = 0
-RDU_COL = 4
-PS_COL = 5
-CALNUM_COL = 9
-AS_COL = 10
-AF_COL = 11
-ES_COL = 12
-EF_COL = 13
-LS_COL = 14
-SES_COL = 24
-
 ID_HEADER = 'PE'
 DU_HEADER = 'DU'
 RDU_HEADER = 'RDU'
@@ -27,6 +15,7 @@ ES_HEADER = 'ES'
 EF_HEADER = 'EF'
 LS_HEADER = 'LS'
 SES_HEADER = 'SES'
+AE_HEADER = 'AUTHORIZED_EVENT_DATE'
 
 DATE_COLON_INDEX = 11
 
@@ -60,6 +49,7 @@ def main():
         global EF_COL
         global LS_COL
         global SES_COL
+        global AE_COL
 
         ID_COL = get_col_num(header_row, ID_HEADER)
         DU_COL = get_col_num(header_row, DU_HEADER)
@@ -72,6 +62,7 @@ def main():
         EF_COL = get_col_num(header_row, EF_HEADER)
         LS_COL = get_col_num(header_row, LS_HEADER)
         SES_COL = get_col_num(header_row, SES_HEADER)
+        AE_COL = get_col_num(header_row, AE_HEADER)
                              
         row_num = 1
 
@@ -106,6 +97,10 @@ def main():
             if row[SES_COL] != '':
                 date_time_parts = row[SES_COL].split(':')
                 new_node.set_ses_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AE_COL] != '':
+                date_time_parts = row[AE_COL].split(':')
+                new_node.set_ae_with_time(date_time_parts[0], date_time_parts[1])
 
             #print(row[AS_COL][DATE_COLON_INDEX + 1:])
             #convert_start_to_shift(row[AS_COL][DATE_COLON_INDEX + 1:])
@@ -178,7 +173,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
                 latest_shift = pred_prev_es_shift
             elif nodes[n].ef_date == latest_finish:
                 latest_shift = max(latest_shift, nodes[n].ef_shift)
-              
+    
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
@@ -189,11 +184,16 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
+        
     if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)):
         es_date = this_node.ses_date
         es_shift = this_node.ses_shift
         
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
+    
+    if this_node.ae_date != '':
+        es_date = this_node.ae_date
+        es_shift = this_node.ae_shift
 
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     

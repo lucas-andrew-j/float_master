@@ -36,7 +36,11 @@ class Node:
         self.lf_shift = 0
         
         self.ses_date = ''
-        self.ses_shift = 0 
+        self.ses_shift = 0
+        
+        self.ae_date = ''
+        self.ae_shift = 0 
+        
         self.forward_scheduled = False
         
     # ps = early_start
@@ -75,7 +79,10 @@ class Node:
         
     def set_af_with_time(self, date, time):
         self.af_shift = convert_end_to_shift(time)
-        self.af_date = dateutil.parser.parse(date).date()
+        if time == "0000":
+            self.af_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.af_date = dateutil.parser.parse(date).date()
     
     def get_af_date(self):
         return self.af_date
@@ -149,6 +156,17 @@ class Node:
     
     def get_ses_shift(self):
         return self.ses_shift
+    
+    # ae = authorized_event_date
+    def set_ae_with_time(self, date, time):
+        self.ae_shift = convert_start_to_shift(time)
+        self.ae_date = dateutil.parser.parse(date).date()
+    
+    def get_ae_date(self):
+        return self.ae_date
+    
+    def get_ae_shift(self):
+        return self.ae_shift
     
     def set_fp_done(self, status):
         self.forward_scheduled = status
