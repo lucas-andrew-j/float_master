@@ -6,11 +6,11 @@ class Holiday_Handler:
     holiday_set = set()
     holiday_arr = []
     
-    closure_saturdays_set = set()
-    closure_saturdays_arr = []
+    holiday_saturdays_set = set()
+    holiday_saturdays_arr = []
     
-    closure_sundays_set = set()
-    closure_sundays_arr = []
+    holiday_sundays_set = set()
+    holiday_sundays_arr = []
     
     lowest_year = 0
     highest_year = 0
@@ -37,8 +37,8 @@ class Holiday_Handler:
             self.__add_year(year)
             self.lowest_year = year
             self.holiday_arr.sort()
-            self.closure_saturdays_arr.sort()
-            self.closure_sundays_arr.sort()
+            self.holiday_saturdays_arr.sort()
+            self.holiday_sundays_arr.sort()
         else:
             raise Exception("Attempted to add year to holidays that is not adjacent to the lowest or highest current years")
     
@@ -49,10 +49,10 @@ class Holiday_Handler:
         result = date in self.holiday_set
         
         if cal_code % 10 == 7:
-            result = result and date in self.closure_sundays_set
+            result = result or date in self.holiday_sundays_set
             
         if cal_code % 10 >= 6:
-            result = result and date in self.closure_saturdays_set
+            result = result or date in self.holiday_saturdays_set
         
         return result
     
@@ -64,18 +64,23 @@ class Holiday_Handler:
         count = finish_index - start_index + 1
         
         if cal_code % 10 == 7:
-            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.closure_sundays_arr)
-            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.closure_sundays_arr)
+            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.holiday_sundays_arr)
+            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.holiday_sundays_arr)
             count = count + finish_index - start_index + 1
             
         if cal_code % 10 >= 6:
-            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.closure_saturdays_arr)
-            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.closure_saturdays_arr)
+            start_index = Holiday_Handler.__get_index_closest_gte(start_date, self.holiday_saturdays_arr)
+            finish_index = Holiday_Handler.__get_index_closest_lte(finish_date, self.holiday_saturdays_arr)
             count = count + finish_index - start_index + 1
         
         return count
             
     def __add_year(self, year):
+        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
+        if year > 2026:
+            print("Year %d bypassed." % (year))
+            return
+        
         self.__add_new_year(year)
         self.__add_mlk_holiday(year)
         self.__add_presidents_day(year)
@@ -86,12 +91,12 @@ class Holiday_Handler:
         self.__add_columbus_day(year)
         self.__add_veterans_day(year)
         self.__add_thanksgiving(year)
-        self.__add_add_christmas(year)
+        self.__add_christmas(year)
         self.__add_closure(year)
     
     def __add_new_year(self, year):
         actual_holiday = dateutil.parser.parse("1/1/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(actual_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(actual_holiday)
         # Sometimes this is on the 31st of the year before, which overlaps with closures.
         # This prevents duplication of these dates in the array.
         if not observed_holiday in self.holiday_set:
@@ -122,14 +127,23 @@ class Holiday_Handler:
     
     def __add_juneteenth(self, year):
         actual_holiday = dateutil.parser.parse("6/19/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(actual_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(actual_holiday)
         self.holiday_set.add(observed_holiday)
         self.holiday_arr.append(observed_holiday)
         return observed_holiday
     
     def __add_independence_day(self, year):
         actual_holiday = dateutil.parser.parse("7/4/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(actual_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(actual_holiday)
+        
+        # This seems to be the default exception calendar. Don't know about the fourth landing on Sunday.
+        if actual_holiday.weekday() == 5:
+            self.holiday_saturdays_set.add(actual_holiday)
+            self.holiday_saturdays_arr.append(actual_holiday)
+            
+            self.holiday_sundays_set.add(actual_holiday + timedelta(days = 1))
+            self.holiday_sundays_arr.append(actual_holiday + timedelta(days = 1))
+            
         self.holiday_set.add(observed_holiday)
         self.holiday_arr.append(observed_holiday)
         return observed_holiday
@@ -148,7 +162,7 @@ class Holiday_Handler:
     
     def __add_veterans_day(self, year):
         actual_holiday = dateutil.parser.parse("11/11/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(actual_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(actual_holiday)
         self.holiday_set.add(observed_holiday)
         self.holiday_arr.append(observed_holiday)
         return observed_holiday
@@ -159,9 +173,9 @@ class Holiday_Handler:
         self.holiday_arr.append(observed_holiday)
         return observed_holiday
     
-    def __add_add_christmas(self, year):
+    def __add_christmas(self, year):
         actual_holiday = dateutil.parser.parse("12/25/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(actual_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(actual_holiday)
         self.holiday_set.add(observed_holiday)
         self.holiday_arr.append(observed_holiday)
         return observed_holiday
@@ -174,11 +188,11 @@ class Holiday_Handler:
         
         while current_date <= end_date: #dateutil.parser.parse("12/31/%d" % year).date():
             if current_date.weekday() == 5:
-                self.closure_saturdays_set.add(current_date)
-                self.closure_saturdays_arr.append(current_date)
+                self.holiday_saturdays_set.add(current_date)
+                self.holiday_saturdays_arr.append(current_date)
             elif current_date.weekday() == 6:
-                self.closure_sundays_set.add(current_date)
-                self.closure_sundays_arr.append(current_date)
+                self.holiday_sundays_set.add(current_date)
+                self.holiday_sundays_arr.append(current_date)
             else:
                 if not current_date in self.holiday_set:
                     self.holiday_set.add(current_date)
@@ -188,7 +202,7 @@ class Holiday_Handler:
             current_date = current_date + timedelta(days = 1)
         
     @staticmethod
-    def __nearest_weekend_day(date):
+    def __nearest_weekday(date):
         weekend_day = date.weekday()
         return date + timedelta(days = (((weekend_day + 1) // 6) * -1 + ((weekend_day + 1) // 7) * 2))
     
@@ -206,11 +220,15 @@ class Holiday_Handler:
     @staticmethod
     def __get_closure_start(year):
         xmas_holiday = dateutil.parser.parse("12/25/%d" % year).date()
-        observed_holiday = Holiday_Handler.__nearest_weekend_day(xmas_holiday)
+        observed_holiday = Holiday_Handler.__nearest_weekday(xmas_holiday)
         return observed_holiday
     
     @staticmethod
     def __get_closure_end(year):
+        # TODO Remove this. It's here because the project I'm testing with does not have any holidays past 2026.
+        if year > 2026:
+            return dateutil.parser.parse("12/31/%d" % (year - 1)).date()
+        
         new_year_holiday = dateutil.parser.parse("1/1/%d" % year).date()
         new_year_weekday = new_year_holiday.weekday()
         
