@@ -16,6 +16,7 @@ EF_HEADER = 'EF'
 LS_HEADER = 'LS'
 SES_HEADER = 'SES'
 AE_HEADER = 'AUTHORIZED_EVENT_DATE'
+AT_HEADER = 'ACTIVITY TYPE'
 
 DATE_COLON_INDEX = 11
 
@@ -50,6 +51,7 @@ def main():
         global LS_COL
         global SES_COL
         global AE_COL
+        global AT_COL
 
         ID_COL = get_col_num(header_row, ID_HEADER)
         DU_COL = get_col_num(header_row, DU_HEADER)
@@ -63,6 +65,7 @@ def main():
         LS_COL = get_col_num(header_row, LS_HEADER)
         SES_COL = get_col_num(header_row, SES_HEADER)
         AE_COL = get_col_num(header_row, AE_HEADER)
+        AT_COL = get_col_num(header_row, AE_HEADER)
                              
         row_num = 1
 
@@ -153,34 +156,14 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     fw.write('Scheduling %s\n' % (this_node.name))
     this_node.forward_scheduled = True
     
-    latest_finish = earliest_date - timedelta(days=1)
-    latest_shift = 3
-    
-    if not (this_node.du == 0 and this_node.as_date != ''):
-        for n in this_node.predecessors:
-            (pred_prev_es_date, pred_prev_es_shift) = prev_date_shift(nodes[n].es_date, nodes[n].es_shift)
-
-            # TODO Verify these conditionals will handle the case that ef_date == latest_finish and ef_shift > latest_shift
-            # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
-            if nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
-                latest_finish = nodes[n].af_date
-                latest_shift = nodes[n].af_shift
-            elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish and nodes[n].du != 0:
-                latest_finish = nodes[n].ef_date
-                latest_shift = nodes[n].ef_shift
-            elif nodes[n].du == 0 and (pred_prev_es_date > latest_finish or (pred_prev_es_date == latest_finish and pred_prev_es_shift > latest_shift)):
-                latest_finish = pred_prev_es_date
-                latest_shift = pred_prev_es_shift
-            elif nodes[n].ef_date == latest_finish:
-                latest_shift = max(latest_shift, nodes[n].ef_shift)
+    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes)
     
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
-    #TODO Need to update to make sure that ps and ses are on a later date, or the same date with 
-        # a later shift
-    #TODO Need to update the use of SES to ignore it if it makes the job go negative. PS will still
-        # be honored if it makes the job go negative.
+    #TODO Need to update the use of SES to ignore it if it makes the job go negative. This should wait until
+        # backward passes are done, because the ES ending up before the LS will be the indication that
+        # SES could be making the job go negative. PS will still be honored if it makes the job go negative.
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
@@ -195,7 +178,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
         
-    if len(this_node.successors) == 0 and this_node.name != 'EG00':
+    if this_node.ls_date == '':
         es_date = this_node.es_date
         es_shift = this_node.es_shift
 
@@ -237,6 +220,33 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     this_node.ef_shift = ef_shift
 
     schedule_successors(this_node, earliest_date, holidays, nodes)
+    
+def find_latest_pred_finish(this_node, earliest_date, nodes):
+    latest_finish = earliest_date - timedelta(days=1)
+    latest_shift = 3
+    
+    if not (this_node.act_type == 'LOE' and this_node.as_date != ''):
+        for n in this_node.predecessors:
+            (pred_prev_es_date, pred_prev_es_shift) = prev_date_shift(nodes[n].es_date, nodes[n].es_shift)
+
+            # TODO Verify these conditionals will handle the case that ef_date == latest_finish and ef_shift > latest_shift
+            # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
+            if nodes[n].act_type == 'LOE':
+                #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
+                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes)
+                if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
+                    latest_finish = pred_latest_finish
+                    latest_shift = pred_latest_shift
+            elif nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
+                latest_finish = nodes[n].af_date
+                latest_shift = nodes[n].af_shift
+            elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
+                latest_finish = nodes[n].ef_date
+                latest_shift = nodes[n].ef_shift
+            elif nodes[n].ef_date == latest_finish:
+                latest_shift = max(latest_shift, nodes[n].ef_shift)
+    
+    return latest_finish, latest_shift
     
 def is_working_day(this_node, date, holidays):
     cc_workdays = this_node.cal_code % 10

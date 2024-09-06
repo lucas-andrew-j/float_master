@@ -8,6 +8,7 @@ class Node:
         self.rdu = rdu
         self.du = du
         self.cal_code = cal_code
+        self.act_type = ''
         
         self.predecessors = []
         self.unsched_pred_count = 0
