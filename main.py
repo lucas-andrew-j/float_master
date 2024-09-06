@@ -14,13 +14,12 @@ AF_HEADER = 'AF'
 ES_HEADER = 'ES'
 EF_HEADER = 'EF'
 LS_HEADER = 'LS'
+LF_HEADER = 'LF'
 SES_HEADER = 'SES'
 AE_HEADER = 'AUTHORIZED_EVENT_DATE'
-AT_HEADER = 'ACTIVITY TYPE'
+AT_HEADER = 'ACTIVITY_TYPE'
 
 DATE_COLON_INDEX = 11
-
-mismatches_found = 0
 
 fw = open('log.txt', 'a')
 fw.write('\n###### START OF NEW RUN #######\n')
@@ -49,6 +48,7 @@ def main():
         global ES_COL
         global EF_COL
         global LS_COL
+        global LF_COL
         global SES_COL
         global AE_COL
         global AT_COL
@@ -63,9 +63,10 @@ def main():
         ES_COL = get_col_num(header_row, ES_HEADER)
         EF_COL = get_col_num(header_row, EF_HEADER)
         LS_COL = get_col_num(header_row, LS_HEADER)
+        LF_COL = get_col_num(header_row, LF_HEADER)
         SES_COL = get_col_num(header_row, SES_HEADER)
         AE_COL = get_col_num(header_row, AE_HEADER)
-        AT_COL = get_col_num(header_row, AE_HEADER)
+        AT_COL = get_col_num(header_row, AT_HEADER)
                              
         row_num = 1
 
@@ -73,7 +74,7 @@ def main():
 
         for row in file_reader:
             #print(', '.join(row))
-            new_node = node.Node(row[ID_COL], int(row[DU_COL]), int(row[RDU_COL]), int(row[CALNUM_COL]))
+            new_node = node.Node(row[ID_COL], int(row[DU_COL]), int(row[RDU_COL]), int(row[CALNUM_COL]), row[AT_COL])
 
             #TODO Add the rest of the fields to new_node if they exist
             if row[ES_COL] != '':
@@ -83,6 +84,14 @@ def main():
             if row[EF_COL] != '':
                 date_time_parts = row[EF_COL].split(':')
                 new_node.set_ef_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[LS_COL] != '':
+                date_time_parts = row[LS_COL].split(':')
+                new_node.set_ls_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[LF_COL] != '':
+                date_time_parts = row[LF_COL].split(':')
+                new_node.set_lf_with_time(date_time_parts[0], date_time_parts[1])
                 
             if row[AS_COL] != '':
                 date_time_parts = row[AS_COL].split(':')
@@ -126,7 +135,7 @@ def main():
     #test_clear_nodes(nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('08/01/2024').date()
+    start_date = dateutil.parser.parse('08/20/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -135,14 +144,76 @@ def main():
             # considerable time. If it's really fast, it would be good to still include this here for comparing
             # with the values that we get from the Concerto export.
             schedule_forward_pass(nodes[n], start_date, holidays, nodes)
-
+    
     for n in nodes:
         fw.write('%s\n' % (nodes[n]))
         if nodes[n].get_fp_done() == False:
             fw.write('Unscheduled node: %s\n' % (nodes[n]))
+            
+    print('Verifying results')
     
-    global mismatches_found
-    print('Mismatches found: %d' % (mismatches_found))
+    # TODO Find number of mismatches here
+    with open(nodes_file, newline='') as csvfile:
+        file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        
+        #TODO I think we check headers here
+        header_row = next(file_reader)
+        
+        mismatched_es_date = 0
+        mismatched_ef_date = 0
+        mismatched_es_shift = 0
+        mismatched_ef_shift = 0
+        
+        for row in file_reader:
+            new_node = node.Node(row[ID_COL], int(row[DU_COL]), int(row[RDU_COL]), int(row[CALNUM_COL]), row[AT_COL])
+            matching_node = nodes[new_node.name]
+
+            #TODO Add the rest of the fields to new_node if they exist
+            if row[ES_COL] != '':
+                date_time_parts = row[ES_COL].split(':')
+                new_node.set_es_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[EF_COL] != '':
+                date_time_parts = row[EF_COL].split(':')
+                new_node.set_ef_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AS_COL] != '':
+                date_time_parts = row[AS_COL].split(':')
+                new_node.set_as_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AF_COL] != '':
+                date_time_parts = row[AF_COL].split(':')
+                new_node.set_af_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_fp_done(True)
+            
+            if row[PS_COL] != '':
+                date_time_parts = row[PS_COL].split(':')
+                new_node.set_ps_with_time(date_time_parts[0], date_time_parts[1])
+
+            if row[SES_COL] != '':
+                date_time_parts = row[SES_COL].split(':')
+                new_node.set_ses_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if row[AE_COL] != '':
+                date_time_parts = row[AE_COL].split(':')
+                new_node.set_ae_with_time(date_time_parts[0], date_time_parts[1])
+                
+            if new_node.es_date != matching_node.es_date:
+                mismatched_es_date = mismatched_es_date + 1
+            
+            if new_node.ef_date != matching_node.ef_date:
+                mismatched_ef_date = mismatched_ef_date + 1
+                
+            if new_node.es_shift != matching_node.es_shift:
+                mismatched_es_shift = mismatched_es_shift + 1
+            
+            if new_node.ef_shift != matching_node.ef_shift:
+                mismatched_ef_shift = mismatched_ef_shift + 1
+                
+        print('Mismatched ES Date: %d' % (mismatched_es_date))
+        print('Mismatched ES Shift: %d' % (mismatched_es_shift))
+        print('Mismatched EF Date: %d' % (mismatched_ef_date))
+        print('Mismatched EF Shift: %d' % (mismatched_ef_shift))
     print('Complete')
     
 def get_col_num(header_row, col_header):
@@ -154,11 +225,19 @@ def get_col_num(header_row, col_header):
 
 def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     fw.write('Scheduling %s\n' % (this_node.name))
-    this_node.forward_scheduled = True
     
-    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes)
+    # This can happen when work is out of order
+    if this_node.forward_scheduled == True:
+        return
+    else:
+        this_node.forward_scheduled = True
+    
+    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes, False)
     
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
+    
+    if this_node.name == '38CTB55404U01':
+        print('Tentative ES 1: %s' % (es_date))
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
     #TODO Need to update the use of SES to ignore it if it makes the job go negative. This should wait until
@@ -167,25 +246,43 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
-        
+    
+    if this_node.name == '38CTB55404U01':
+        print('Tentative ES 2: %s' % (es_date))
+    
     if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)):
         es_date = this_node.ses_date
         es_shift = this_node.ses_shift
-        
+    
+    if this_node.name == '38CTB55404U01':
+        print('Tentative ES 3: %s' % (es_date))
+    
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
+    
+    if this_node.name == '38CTB55404U01':
+        print('Tentative ES 4: %s' % (es_date))
     
     if this_node.ae_date != '' and (this_node.ae_date > es_date or (this_node.ae_date == es_date and this_node.ae_shift >= es_shift)):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
-        
-    if this_node.ls_date == '':
-        es_date = this_node.es_date
-        es_shift = this_node.es_shift
-
+    
+    if this_node.name == '38CTB55404U01':
+        print('Tentative ES 5: %s' % (es_date))
+    
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     
-    global mismatches_found
-    #if this_node.ef_date.strftime('%y') == this_node.es_date.strftime('%y'):
+    # TODO This is relying on Concerto to flag when a sequence is not tied properly. Untied sequences can be checked during backward passes,
+    #      so when backward passes are being implemented, we should use the results of that for the conditional.
+    # es_date and es_shift are directly from Concerto because they are based on import dates, which are not available in exports.
+    # ef_date and ef_shift are directly from Concerto because it does not calculate consistently.
+    if this_node.ls_date == '':
+        if this_node.name == '38CTB55404U01':
+            print('Should not be here')
+        es_date = this_node.es_date
+        es_shift = this_node.es_shift
+        ef_date = this_node.ef_date
+        ef_shift = this_node.ef_shift
+    
     if this_node.ef_date != ef_date:# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
         fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
         fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
@@ -196,7 +293,6 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
-        mismatches_found = mismatches_found + 1
 
     # The check for du or rdu not being zero is because milestones that have an ES/PS
     # time of 0000 sometimes end at 2359 the day before, or at 0000 on the same day.
@@ -212,7 +308,6 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         fw.write('\tConcerto EF Shift:\t%s\n' % (this_node.ef_shift))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
-        mismatches_found = mismatches_found + 1
         
     this_node.es_date = es_date
     this_node.es_shift = es_shift
@@ -221,11 +316,12 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
 
     schedule_successors(this_node, earliest_date, holidays, nodes)
     
-def find_latest_pred_finish(this_node, earliest_date, nodes):
+def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
     latest_finish = earliest_date - timedelta(days=1)
     latest_shift = 3
     
-    if not (this_node.act_type == 'LOE' and this_node.as_date != ''):
+    # TODO The check for as date here is preventing LOE work from looking back to find appropriate EF dates
+    if not (this_node.act_type == 'LOE' and this_node.as_date != '') or loe_recurse:
         for n in this_node.predecessors:
             (pred_prev_es_date, pred_prev_es_shift) = prev_date_shift(nodes[n].es_date, nodes[n].es_shift)
 
@@ -233,7 +329,7 @@ def find_latest_pred_finish(this_node, earliest_date, nodes):
             # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
             if nodes[n].act_type == 'LOE':
                 #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
-                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes)
+                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, True)
                 if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
                     latest_finish = pred_latest_finish
                     latest_shift = pred_latest_shift
