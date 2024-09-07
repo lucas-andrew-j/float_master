@@ -232,7 +232,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     else:
         this_node.forward_scheduled = True
     
-    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes, False)
+    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes)
     
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
@@ -316,12 +316,11 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
 
     schedule_successors(this_node, earliest_date, holidays, nodes)
     
-def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
+def find_latest_pred_finish(this_node, earliest_date, nodes):
     latest_finish = earliest_date - timedelta(days=1)
     latest_shift = 3
     
-    # TODO The check for as date here is preventing LOE work from looking back to find appropriate EF dates
-    if not (this_node.act_type == 'LOE' and this_node.as_date != '') or loe_recurse:
+    if not (this_node.act_type == 'LOE' and this_node.as_date != ''):
         for n in this_node.predecessors:
             (pred_prev_es_date, pred_prev_es_shift) = prev_date_shift(nodes[n].es_date, nodes[n].es_shift)
 
@@ -329,7 +328,7 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
             # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
             if nodes[n].act_type == 'LOE':
                 #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
-                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, True)
+                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes)
                 if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
                     latest_finish = pred_latest_finish
                     latest_shift = pred_latest_shift

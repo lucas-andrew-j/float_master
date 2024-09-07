@@ -3,12 +3,12 @@ from shift_converter import *
 from datetime import timedelta
 
 class Node:
-    def __init__(self, name, du, rdu, cal_code):
+    def __init__(self, name, du, rdu, cal_code, act_type):
         self.name = name
         self.rdu = rdu
         self.du = du
         self.cal_code = cal_code
-        self.act_type = ''
+        self.act_type = act_type
         
         self.predecessors = []
         self.unsched_pred_count = 0
@@ -113,7 +113,11 @@ class Node:
         
     def set_ef_with_time(self, date, time):
         self.ef_shift = convert_end_to_shift(time)
-        self.ef_date = dateutil.parser.parse(date).date()
+        
+        if time == '0000':
+            self.ef_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.ef_date = dateutil.parser.parse(date).date()
     
     def get_ef_date(self):
         return self.ef_date
@@ -125,6 +129,10 @@ class Node:
     def set_ls(self, date, shift):
         self.ls_date = dateutil.parser.parse(date).date()
         self.ls_shift = shift
+        
+    def set_ls_with_time(self, date, time):
+        self.ls_shift = convert_start_to_shift(time)
+        self.ls_date = dateutil.parser.parse(date).date()
     
     def get_ls_date(self):
         return self.ls_date
@@ -136,6 +144,14 @@ class Node:
     def set_lf(self, date, shift):
         self.lf_date = dateutil.parser.parse(date).date()
         self.lf_shift = shift
+        
+    def set_lf_with_time(self, date, time):
+        self.lf_shift = convert_end_to_shift(time)
+        
+        if time == '0000':
+            self.lf_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.lf_date = dateutil.parser.parse(date).date()
         
     def set_lf(self, date, time):
         self.lf_date = dateutil.parser.parse(date).date()
