@@ -322,14 +322,17 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
                     if pred_prev_es_date > latest_finish or (pred_prev_es_date == latest_finish and pred_prev_es_shift > latest_shift):
                         latest_finish = pred_prev_es_date
                         latest_shift = pred_prev_es_shift
-            elif nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
-                latest_finish = nodes[n].af_date
-                latest_shift = nodes[n].af_shift
             elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
                 latest_finish = nodes[n].ef_date
                 latest_shift = nodes[n].ef_shift
             elif nodes[n].ef_date == latest_finish:
                 latest_shift = max(latest_shift, nodes[n].ef_shift)
+            elif nodes[n].af_date != '' and nodes[n].incomp_pred_count > 0: #and nodes[n].af_date > latest_finish:
+                (af_latest_finish, af_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
+                
+                if af_latest_finish > latest_finish or (af_latest_finish == latest_finish and af_latest_shift > latest_shift):
+                    latest_finish = af_latest_finish
+                    latest_shift = af_latest_shift
     
     return latest_finish, latest_shift
     

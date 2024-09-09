@@ -15,6 +15,8 @@ class Node:
         self.successors = []
         self.unsched_succ_count = 0
         
+        self.incomp_pred_count = 0
+        
         self.ps_date = ''
         self.ps_shift = 0
         
@@ -201,6 +203,7 @@ class Node:
         self.predecessors.append(predecessor)
         if not pred_complete:
             self.unsched_pred_count = self.unsched_pred_count + 1
+            self.incomp_pred_count = self.incomp_pred_count + 1
        
     def decr_unsched_pred_count(self):
         self.unsched_pred_count = self.unsched_pred_count - 1
