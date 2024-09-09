@@ -135,7 +135,7 @@ def main():
     #test_clear_nodes(nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('08/20/2024').date()
+    start_date = dateutil.parser.parse('08/22/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -210,9 +210,9 @@ def main():
             if new_node.ef_shift != matching_node.ef_shift:
                 mismatched_ef_shift = mismatched_ef_shift + 1
                 
-        print('Mismatched ES Date: %d' % (mismatched_es_date))
+        print('Mismatched ES Date:  %d' % (mismatched_es_date))
         print('Mismatched ES Shift: %d' % (mismatched_es_shift))
-        print('Mismatched EF Date: %d' % (mismatched_ef_date))
+        print('Mismatched EF Date:  %d' % (mismatched_ef_date))
         print('Mismatched EF Shift: %d' % (mismatched_ef_shift))
     print('Complete')
     
@@ -232,12 +232,9 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     else:
         this_node.forward_scheduled = True
     
-    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes)
+    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes, False)
     
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
-    
-    if this_node.name == '38CTB55404U01':
-        print('Tentative ES 1: %s' % (es_date))
     
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
     #TODO Need to update the use of SES to ignore it if it makes the job go negative. This should wait until
@@ -247,27 +244,15 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
     
-    if this_node.name == '38CTB55404U01':
-        print('Tentative ES 2: %s' % (es_date))
-    
     if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)):
         es_date = this_node.ses_date
         es_shift = this_node.ses_shift
     
-    if this_node.name == '38CTB55404U01':
-        print('Tentative ES 3: %s' % (es_date))
-    
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
-    
-    if this_node.name == '38CTB55404U01':
-        print('Tentative ES 4: %s' % (es_date))
     
     if this_node.ae_date != '' and (this_node.ae_date > es_date or (this_node.ae_date == es_date and this_node.ae_shift >= es_shift)):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
-    
-    if this_node.name == '38CTB55404U01':
-        print('Tentative ES 5: %s' % (es_date))
     
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     
@@ -316,22 +301,27 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
 
     schedule_successors(this_node, earliest_date, holidays, nodes)
     
-def find_latest_pred_finish(this_node, earliest_date, nodes):
+def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
     latest_finish = earliest_date - timedelta(days=1)
     latest_shift = 3
     
-    if not (this_node.act_type == 'LOE' and this_node.as_date != ''):
+    if not (this_node.act_type == 'LOE' and this_node.as_date != '') or loe_recurse:
         for n in this_node.predecessors:
             (pred_prev_es_date, pred_prev_es_shift) = prev_date_shift(nodes[n].es_date, nodes[n].es_shift)
 
             # TODO Verify these conditionals will handle the case that ef_date == latest_finish and ef_shift > latest_shift
             # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
             if nodes[n].act_type == 'LOE':
-                #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
-                (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes)
-                if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
-                    latest_finish = pred_latest_finish
-                    latest_shift = pred_latest_shift
+                if nodes[n].as_date != '':
+                    #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
+                    (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, True)
+                    if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
+                        latest_finish = pred_latest_finish
+                        latest_shift = pred_latest_shift
+                else:
+                    if pred_prev_es_date > latest_finish or (pred_prev_es_date == latest_finish and pred_prev_es_shift > latest_shift):
+                        latest_finish = pred_prev_es_date
+                        latest_shift = pred_prev_es_shift
             elif nodes[n].af_date != '' and nodes[n].af_date > latest_finish:
                 latest_finish = nodes[n].af_date
                 latest_shift = nodes[n].af_shift
