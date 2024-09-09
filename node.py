@@ -9,13 +9,12 @@ class Node:
         self.du = du
         self.cal_code = cal_code
         self.act_type = act_type
+        self.out_of_order = False
         
         self.predecessors = []
         self.unsched_pred_count = 0
         self.successors = []
         self.unsched_succ_count = 0
-        
-        self.incomp_pred_count = 0
         
         self.ps_date = ''
         self.ps_shift = 0
@@ -203,7 +202,6 @@ class Node:
         self.predecessors.append(predecessor)
         if not pred_complete:
             self.unsched_pred_count = self.unsched_pred_count + 1
-            self.incomp_pred_count = self.incomp_pred_count + 1
        
     def decr_unsched_pred_count(self):
         self.unsched_pred_count = self.unsched_pred_count - 1

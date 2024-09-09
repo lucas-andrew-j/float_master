@@ -131,6 +131,12 @@ def main():
         for row in file_reader:
             nodes[row[0]].add_succ(row[1], nodes[row[1]].af_date != '')
             nodes[row[1]].add_pred(row[0], nodes[row[0]].af_date != '')
+            
+            if nodes[row[0]].af_date == '' and nodes[row[1]].as_date != '':
+                nodes[row[1]].out_of_order = True
+                
+            if nodes[row[0]].out_of_order == True and nodes[row[1]].as_date != '':
+                nodes[row[1]].out_of_order = True
 
     #test_clear_nodes(nodes)
 
@@ -327,7 +333,7 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
                 latest_shift = nodes[n].ef_shift
             elif nodes[n].ef_date == latest_finish:
                 latest_shift = max(latest_shift, nodes[n].ef_shift)
-            elif nodes[n].af_date != '' and nodes[n].incomp_pred_count > 0: #and nodes[n].af_date > latest_finish:
+            elif nodes[n].af_date != '' and nodes[n].out_of_order == True: #and nodes[n].af_date > latest_finish:
                 (af_latest_finish, af_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
                 
                 if af_latest_finish > latest_finish or (af_latest_finish == latest_finish and af_latest_shift > latest_shift):
