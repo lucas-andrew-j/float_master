@@ -139,6 +139,8 @@ def main():
                 nodes[row[1]].out_of_order = True
 
     #test_clear_nodes(nodes)
+    print('Marking tied nodes')
+    mark_tied_nodes(nodes['EG00'], nodes)
 
     holidays = Holiday_Handler(2020, 2030)
     start_date = dateutil.parser.parse('08/22/2024').date()
@@ -245,7 +247,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     #TODO Need to make sure these are not putting the es_date and es_shift on a weekend or holiday
     #TODO Need to update the use of SES to ignore it if it makes the job go negative. This should wait until
         # backward passes are done, because the ES ending up before the LS will be the indication that
-        # SES could be making the job go negative. PS will still be honored if it makes the job go negative.
+        # SES could be making the job go negative. PS will still be honored if it makes the job go negative.    
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
@@ -266,15 +268,13 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     #      so when backward passes are being implemented, we should use the results of that for the conditional.
     # es_date and es_shift are directly from Concerto because they are based on import dates, which are not available in exports.
     # ef_date and ef_shift are directly from Concerto because it does not calculate consistently.
-    if this_node.ls_date == '':
-        if this_node.name == '38CTB55404U01':
-            print('Should not be here')
+    if this_node.tied == False:
         es_date = this_node.es_date
         es_shift = this_node.es_shift
         ef_date = this_node.ef_date
         ef_shift = this_node.ef_shift
     
-    if this_node.ef_date != ef_date:# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
+    if this_node.ef_date != ef_date and this_node.act_type != 'LOE':# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
         fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
         fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
         fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
@@ -504,4 +504,11 @@ def schedule_successors(this_node, earliest_date, holidays, nodes):
             schedule_forward_pass(nodes[n], earliest_date, holidays, nodes)
         nodes[n].decr_unsched_pred_count()
 
+def mark_tied_nodes(this_node, nodes):
+    this_node.tied = True
+    
+    for n in this_node.predecessors:
+        if nodes[n].tied == False:
+            mark_tied_nodes(nodes[n], nodes)
+        
 main()

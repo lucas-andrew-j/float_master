@@ -10,6 +10,7 @@ class Node:
         self.cal_code = cal_code
         self.act_type = act_type
         self.out_of_order = False
+        self.tied = False
         
         self.predecessors = []
         self.unsched_pred_count = 0
