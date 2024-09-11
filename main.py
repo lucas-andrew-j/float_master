@@ -259,7 +259,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
     
-    if this_node.ae_date != '' and (this_node.ae_date > es_date or (this_node.ae_date == es_date and this_node.ae_shift >= es_shift)):
+    if this_node.ae_date != '' and (this_node.act_type == 'Completion Milestone' or (this_node.ae_date > es_date or (this_node.ae_date == es_date and this_node.ae_shift >= es_shift))):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
     
