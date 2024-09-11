@@ -252,7 +252,8 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
     
-    if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)):
+    #TODO Replace the check for SES being after the known ES. Need to compare with the LS after the backward pass is implemented.
+    if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)) and (this_node.ses_date < this_node.es_date or (this_node.ses_date == this_node.es_date and this_node.ses_shift <= this_node.es_shift)):
         es_date = this_node.ses_date
         es_shift = this_node.ses_shift
     
