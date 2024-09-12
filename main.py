@@ -275,6 +275,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         ef_date = this_node.ef_date
         ef_shift = this_node.ef_shift
     
+    #The LOE exclusion here is because it won't be fixed until the backward pass is implemented
     if this_node.ef_date != ef_date and this_node.act_type != 'LOE':# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
         fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
         fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
@@ -414,6 +415,13 @@ def adjust_concerto_es_date(this_node, holidays):
             this_node.es_shift = 1
 
 def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
+    # TODO This needs to not capture LOE when the backward pass is done. EF should be the same as LF for LOE, and LF won't use this function.
+    if this_node.rdu == 0:
+        if start_shift == 1:
+            return start_date - timedelta(days = 1), 3
+        else:
+            return start_date, start_shift - 1
+    
     #TODO Calculate the minimum date that the early finish could be (based on cal_code)
     shifts_per_day = this_node.cal_code // 10
     days_per_week = this_node.cal_code % 10
