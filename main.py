@@ -211,7 +211,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     else:
         this_node.forward_scheduled = True
     
-    (latest_finish, latest_shift) = find_latest_pred_finish(this_node, earliest_date, nodes, False)
+    (latest_finish, latest_shift, pushing_es) = find_latest_pred_finish(this_node, earliest_date, nodes, False)
     
     (es_date, es_shift) = next_working_date_shift(this_node, latest_finish, latest_shift, holidays)
     
@@ -222,11 +222,13 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     if this_node.ps_date != '' and (this_node.ps_date > es_date or (this_node.ps_date == es_date and this_node.ps_shift >= es_shift)):
         es_date = this_node.ps_date
         es_shift = this_node.ps_shift
+        pushing_es = 'Planned Start'
     
     #TODO Replace the check for SES being after the known ES. Need to compare with the LS after the backward pass is implemented.
     if this_node.ses_date != '' and (this_node.ses_date > es_date or (this_node.ses_date == es_date and this_node.ses_shift >= es_shift)) and (this_node.ses_date < this_node.es_date or (this_node.ses_date == this_node.es_date and this_node.ses_shift <= this_node.es_shift)):
         es_date = this_node.ses_date
         es_shift = this_node.ses_shift
+        pushing_es = 'Scheduled Early Start'
     
     (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
     
@@ -234,6 +236,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
         (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
+        pushing_es = 'Authorized Event Date'
     
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     
@@ -246,9 +249,39 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         es_shift = this_node.es_shift
         ef_date = this_node.ef_date
         ef_shift = this_node.ef_shift
+        pushing_es = 'Untied'
+        
+    if this_node.es_date == es_date and this_node.es_shift == es_shift:
+        this_node.es_correct = True
+    
+    this_node.pushing_es = find_pushing_es(this_node, pushing_es, nodes)
+    
+    if this_node.es_date != es_date:# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
+        fw.write('Mismatch between early start dates: %s\n' % (this_node.name))
+        fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+        fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+        fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
+        fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
+        fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
+        fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
+        fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
+        fw.write('\tPushed by:\t%s\n' % (this_node.pushing_es))
+        
+    elif this_node.es_shift != es_shift:# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
+        fw.write('Mismatch between early start shifts: %s\n' % (this_node.name))
+        fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
+        fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
+        fw.write('\tConcerto ES Shift:\t%s\n' % (this_node.es_shift))
+        fw.write('\tCalculated ES Shift:%s\n' % (es_shift))
+        fw.write('\tCalculated EF Date:\t%s\n' % (ef_date))
+        fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
+        fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
+        fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
+        fw.write('\tPushed by:\t%s\n' % (this_node.pushing_es))
     
     #The LOE exclusion here is because it won't be fixed until the backward pass is implemented
-    if this_node.ef_date != ef_date and this_node.act_type != 'LOE':# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
+    elif this_node.ef_date != ef_date and this_node.act_type != 'LOE':# and this_node.es_date == es_date and this_node.es_shift == es_shift and this_node.rdu < 90 and this_node.rdu != 0:
         fw.write('Mismatch between early finish dates: %s\n' % (this_node.name))
         fw.write('\tConcerto ES Date:\t%s\n' % (this_node.es_date))
         fw.write('\tCalculated ES Date:\t%s\n' % (es_date))
@@ -258,6 +291,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         fw.write('\tConcerto EF Date:\t%s\n' % (this_node.ef_date))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
+        fw.write('\tPushed by:\t%s\n' % (this_node.pushing_es))
 
     # The check for du or rdu not being zero is because milestones that have an ES/PS
     # time of 0000 sometimes end at 2359 the day before, or at 0000 on the same day.
@@ -273,6 +307,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
         fw.write('\tConcerto EF Shift:\t%s\n' % (this_node.ef_shift))
         fw.write('\tConcerto RDU:\t\t%s\n' % (this_node.rdu))
         fw.write('\tConcerto Cal Code:\t%s\n' % (this_node.cal_code))
+        fw.write('\tPushed by:\t%s\n' % (this_node.pushing_es))
         
     this_node.es_date = es_date
     this_node.es_shift = es_shift
@@ -284,6 +319,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
 def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
     latest_finish = earliest_date - timedelta(days=1)
     latest_shift = 3
+    pushing_es = 'ROTN'
     
     if not (this_node.act_type == 'LOE' and this_node.as_date != '') or loe_recurse:
         for n in this_node.predecessors:
@@ -293,28 +329,33 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
             # TODO I don't think these AF checks are needed, because EF will have the same data if there is an AF.
             if nodes[n].act_type == 'LOE':
                 if nodes[n].as_date != '':
-                    #TODO Need to change this to look back recursively instead of assuming LOE work's ES is the right ES.
-                    (pred_latest_finish, pred_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, True)
+                    (pred_latest_finish, pred_latest_shift, maybe_pushing_es) = find_latest_pred_finish(nodes[n], earliest_date, nodes, True)
                     if pred_latest_finish > latest_finish or (pred_latest_finish == latest_finish and pred_latest_shift > latest_shift):
                         latest_finish = pred_latest_finish
                         latest_shift = pred_latest_shift
+                        pushing_es = n
                 else:
                     if pred_prev_es_date > latest_finish or (pred_prev_es_date == latest_finish and pred_prev_es_shift > latest_shift):
                         latest_finish = pred_prev_es_date
                         latest_shift = pred_prev_es_shift
+                        pushing_es = n
             elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
                 latest_finish = nodes[n].ef_date
                 latest_shift = nodes[n].ef_shift
+                pushing_es = n
             elif nodes[n].ef_date == latest_finish:
-                latest_shift = max(latest_shift, nodes[n].ef_shift)
+                if nodes[n].ef_shift > latest_shift:
+                    latest_shift = nodes[n].ef_shift
+                    pushing_es = n
             elif nodes[n].af_date != '' and nodes[n].out_of_order == True: #and nodes[n].af_date > latest_finish:
-                (af_latest_finish, af_latest_shift) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
+                (af_latest_finish, af_latest_shift, maybe_pushing_es) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
                 
                 if af_latest_finish > latest_finish or (af_latest_finish == latest_finish and af_latest_shift > latest_shift):
                     latest_finish = af_latest_finish
                     latest_shift = af_latest_shift
+                    pushing_es = maybe_pushing_es
     
-    return latest_finish, latest_shift
+    return latest_finish, latest_shift, pushing_es
     
 def is_working_day(this_node, date, holidays):
     cc_workdays = this_node.cal_code % 10
@@ -491,5 +532,22 @@ def mark_tied_nodes(this_node, nodes):
     for n in this_node.predecessors:
         if nodes[n].tied == False:
             mark_tied_nodes(nodes[n], nodes)
-        
+
+def find_pushing_es(this_node, pushing_es, nodes):
+    if this_node.es_correct or not is_node(pushing_es):
+        return pushing_es
+    
+    pushing_es_node = nodes[pushing_es]
+    
+    if pushing_es_node.es_correct == True or not is_node(pushing_es_node.pushing_es):
+        return pushing_es
+
+    if nodes[pushing_es_node.pushing_es].es_correct == True:
+        return pushing_es
+    
+    return pushing_es_node.pushing_es
+    
+def is_node(name):
+    return not (name == 'Planned Start' or name == 'Scheduled Early Start' or name == 'Authorized Event Date' or name == 'ROTN')
+
 main()

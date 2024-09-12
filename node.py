@@ -14,8 +14,13 @@ class Node:
         
         self.predecessors = []
         self.unsched_pred_count = 0
+        self.pushing_es = ''
+        self.es_correct = False
+        
         self.successors = []
         self.unsched_succ_count = 0
+        self.pushing_ls = ''
+        self.ls_correct = False
         
         self.ps_date = ''
         self.ps_shift = 0
