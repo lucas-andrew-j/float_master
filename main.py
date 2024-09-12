@@ -35,7 +35,6 @@ def main():
     with open(nodes_file, newline='') as csvfile:
         file_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         
-        #TODO I think we check headers here
         header_row = next(file_reader)
         
         global ID_COL
@@ -80,18 +79,23 @@ def main():
             if row[ES_COL] != '':
                 date_time_parts = row[ES_COL].split(':')
                 new_node.set_es_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_export_es_with_time(date_time_parts[0], date_time_parts[1])
+                
                 
             if row[EF_COL] != '':
                 date_time_parts = row[EF_COL].split(':')
                 new_node.set_ef_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_export_ef_with_time(date_time_parts[0], date_time_parts[1])
                 
             if row[LS_COL] != '':
                 date_time_parts = row[LS_COL].split(':')
                 new_node.set_ls_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_export_ls_with_time(date_time_parts[0], date_time_parts[1])
                 
             if row[LF_COL] != '':
                 date_time_parts = row[LF_COL].split(':')
                 new_node.set_lf_with_time(date_time_parts[0], date_time_parts[1])
+                new_node.set_export_lf_with_time(date_time_parts[0], date_time_parts[1])
                 
             if row[AS_COL] != '':
                 date_time_parts = row[AS_COL].split(':')
@@ -143,7 +147,7 @@ def main():
     mark_tied_nodes(nodes['EG00'], nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('08/22/2024').date()
+    start_date = dateutil.parser.parse('08/26/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -172,50 +176,17 @@ def main():
         mismatched_es_shift = 0
         mismatched_ef_shift = 0
         
-        for row in file_reader:
-            new_node = node.Node(row[ID_COL], int(row[DU_COL]), int(row[RDU_COL]), int(row[CALNUM_COL]), row[AT_COL])
-            matching_node = nodes[new_node.name]
-
-            #TODO Add the rest of the fields to new_node if they exist
-            if row[ES_COL] != '':
-                date_time_parts = row[ES_COL].split(':')
-                new_node.set_es_with_time(date_time_parts[0], date_time_parts[1])
-                
-            if row[EF_COL] != '':
-                date_time_parts = row[EF_COL].split(':')
-                new_node.set_ef_with_time(date_time_parts[0], date_time_parts[1])
-                
-            if row[AS_COL] != '':
-                date_time_parts = row[AS_COL].split(':')
-                new_node.set_as_with_time(date_time_parts[0], date_time_parts[1])
-                
-            if row[AF_COL] != '':
-                date_time_parts = row[AF_COL].split(':')
-                new_node.set_af_with_time(date_time_parts[0], date_time_parts[1])
-                new_node.set_fp_done(True)
-            
-            if row[PS_COL] != '':
-                date_time_parts = row[PS_COL].split(':')
-                new_node.set_ps_with_time(date_time_parts[0], date_time_parts[1])
-
-            if row[SES_COL] != '':
-                date_time_parts = row[SES_COL].split(':')
-                new_node.set_ses_with_time(date_time_parts[0], date_time_parts[1])
-                
-            if row[AE_COL] != '':
-                date_time_parts = row[AE_COL].split(':')
-                new_node.set_ae_with_time(date_time_parts[0], date_time_parts[1])
-                
-            if new_node.es_date != matching_node.es_date:
+        for n in nodes:
+            if nodes[n].export_es_date != '' and nodes[n].export_es_date != nodes[n].es_date:
                 mismatched_es_date = mismatched_es_date + 1
             
-            if new_node.ef_date != matching_node.ef_date:
+            if nodes[n].export_ef_date != '' and nodes[n].export_ef_date != nodes[n].ef_date:
                 mismatched_ef_date = mismatched_ef_date + 1
                 
-            if new_node.es_shift != matching_node.es_shift:
+            if nodes[n].export_es_shift != 0 and nodes[n].export_es_shift != nodes[n].es_shift:
                 mismatched_es_shift = mismatched_es_shift + 1
             
-            if new_node.ef_shift != matching_node.ef_shift:
+            if nodes[n].export_ef_shift != 0 and nodes[n].export_ef_shift != nodes[n].ef_shift:
                 mismatched_ef_shift = mismatched_ef_shift + 1
                 
         print('Mismatched ES Date:  %d' % (mismatched_es_date))
@@ -262,6 +233,7 @@ def schedule_forward_pass(this_node, earliest_date, holidays, nodes):
     if this_node.ae_date != '' and (this_node.act_type == 'Completion Milestone' or (this_node.ae_date > es_date or (this_node.ae_date == es_date and this_node.ae_shift >= es_shift))):
         es_date = this_node.ae_date
         es_shift = this_node.ae_shift
+        (es_date, es_shift) = next_working_date_shift_incl(this_node, es_date, es_shift, holidays)
     
     (ef_date, ef_shift) = calc_finish_date_shift(this_node, es_date, es_shift, holidays)
     

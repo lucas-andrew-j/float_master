@@ -46,6 +46,18 @@ class Node:
         
         self.forward_scheduled = False
         
+        self.export_es_date = ''
+        self.export_es_shift = 0
+        
+        self.export_ef_date = ''
+        self.export_ef_shift = 0
+        
+        self.export_ls_date = ''
+        self.export_ls_shift = 0
+        
+        self.export_lf_date = ''
+        self.export_lf_shift = 0
+        
     # ps = early_start
     def set_ps_with_time(self, date, time):
         self.ps_shift = convert_start_to_shift(time)
@@ -154,10 +166,6 @@ class Node:
             self.lf_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
         else:
             self.lf_date = dateutil.parser.parse(date).date()
-        
-    def set_lf(self, date, time):
-        self.lf_date = dateutil.parser.parse(date).date()
-        self.lf_shift = convert_end_to_shift(time)
     
     def get_lf_date(self):
         return self.lf_date
@@ -214,6 +222,54 @@ class Node:
     
     def decr_unsched_succ_count(self):
         self.unsched_succ_count = self.unsched_succ_count - 1
+        
+    def set_export_es_with_time(self, date, time):
+        self.export_es_shift = convert_start_to_shift(time)
+        self.export_es_date = dateutil.parser.parse(date).date()
+    
+    def get_export_es_date(self):
+        return self.export_es_date
+    
+    def get_export_es_shift(self):
+        return self.export_es_shift
+    
+    def set_export_ef_with_time(self, date, time):
+        self.export_ef_shift = convert_end_to_shift(time)
+        
+        if time == '0000':
+            self.export_ef_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.export_ef_date = dateutil.parser.parse(date).date()
+    
+    def get_export_ef_date(self):
+        return self.export_ef_date
+    
+    def get_export_ef_shift(self):
+        return self.export_ef_shift
+    
+    def set_export_ls_with_time(self, date, time):
+        self.export_ls_shift = convert_start_to_shift(time)
+        self.export_ls_date = dateutil.parser.parse(date).date()
+    
+    def get_export_ls_date(self):
+        return self.export_ls_date
+    
+    def get_export_ls_shift(self):
+        return self.export_ls_shift
+    
+    def set_export_lf_with_time(self, date, time):
+        self.export_lf_shift = convert_end_to_shift(time)
+        
+        if time == '0000':
+            self.export_lf_date = dateutil.parser.parse(date).date() - timedelta(days = 1)
+        else:
+            self.export_lf_date = dateutil.parser.parse(date).date()
+    
+    def get_export_lf_date(self):
+        return self.export_lf_date
+    
+    def get_export_lf_shift(self):
+        return self.export_lf_shift
     
     def __str__(self):
         return "Name: %s,\tDU: %s,\tCal Code: %s,\tPred: %s,\tSucc: %s,\tES: %s, %d,\tEF: %s, %d" % (self.name, self.rdu, self.cal_code, self.unsched_pred_count, self.unsched_succ_count, self.es_date, self.es_shift, self.ef_date, self.ef_shift)
