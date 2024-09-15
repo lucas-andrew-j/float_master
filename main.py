@@ -378,6 +378,29 @@ def prev_date_shift(date, shift):
     else:
         return date, shift - 1
 
+# Finds the previous working shift for the node, NOT including the date/shift that is passed in
+# Does NOT assume that follow date is a valid workday
+def prev_working_date_shift(this_node, follow_date, follow_shift, holidays):
+    #print (dateutil.parser.parse('1/2/24').weekday())
+    cc_workdays = this_node.cal_code % 10
+    cc_workshifts = this_node.cal_code // 10
+    default_starting_shift = cc_workshifts % 3 + 1
+    
+    if is_working_day(this_node, follow_date, holidays):
+        if follow_shift == 3:
+            return follow_date, 2
+        if cc_workshifts == 3 and follow_shift == 2:
+            return follow_date, 1
+        elif cc_workdays == 0:
+            return follow_date - timedelta(days = 1), default_starting_shift
+    
+    prev_date = follow_date - timedelta(days = 1)
+    
+    while not is_working_day(this_node, prev_date, holidays):
+        prev_date = prev_date - timedelta(days = 1)
+
+    return prev_date, default_starting_shift
+
 # Finds the next working shift for the node, NOT including the date/shift that is passed in
 # Does NOT assume that prior date is a valid workday
 def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
@@ -386,12 +409,13 @@ def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
     cc_workshifts = this_node.cal_code // 10
     default_starting_shift = (3 - cc_workshifts) + cc_workshifts // 2
     
-    if cc_workshifts != 1 and prior_shift != 3:
-        return prior_date, prior_shift + 1
-    elif cc_workdays == 0:
-        return prior_date + timedelta(days = 1), default_starting_shift
-    elif cc_workshifts != 3 and prior_shift == 1:
-        return prior_date, 2
+    if is_working_day(this_node, prior_date, holidays):
+        if cc_workshifts != 1 and prior_shift != 3:
+            return prior_date, prior_shift + 1
+        elif cc_workdays == 0:
+            return prior_date + timedelta(days = 1), default_starting_shift
+        elif prior_shift == 1:
+            return prior_date, 2
     
     prior_date = prior_date + timedelta(days = 1)
     
@@ -407,14 +431,12 @@ def next_working_date_shift_incl(this_node, prior_date, prior_shift, holidays):
     cc_workshifts = this_node.cal_code // 10
     default_starting_shift = (3 - cc_workshifts) + cc_workshifts // 2
     
-    # Move prior_shift to a valid work shift
     if cc_workshifts != 3 and prior_shift != 3:
         prior_shift = default_starting_shift
     elif cc_workshifts == 1 and prior_shift == 3:
         prior_shift = default_starting_shift
         prior_date = prior_date + timedelta(days = 1)
     
-    # Move prior_date to a valid workday, setting prior_shift to the default value if prior_date is moved
     while not is_working_day(this_node, prior_date, holidays):
         prior_date = prior_date + timedelta(days = 1)
         prior_shift = default_starting_shift
@@ -430,7 +452,10 @@ def adjust_concerto_es_date(this_node, holidays):
 def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
     # TODO This needs to not capture LOE when the backward pass is done. EF should be the same as LF for LOE, and LF won't use this function.
     if this_node.rdu == 0:
-        if start_shift == 1:
+        print('%s' % (this_node.name))
+        if this_node.act_type == 'ME':
+            return prev_working_date_shift(this_node, start_date, start_shift, holidays)
+        elif start_shift == 1:
             return start_date - timedelta(days = 1), 3
         else:
             return start_date, start_shift - 1
