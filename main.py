@@ -354,7 +354,7 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
                     latest_finish = af_latest_finish
                     latest_shift = af_latest_shift
                     pushing_es = maybe_pushing_es
-    
+        
     return latest_finish, latest_shift, pushing_es
     
 def is_working_day(this_node, date, holidays):
@@ -410,12 +410,12 @@ def next_working_date_shift(this_node, prior_date, prior_shift, holidays):
     default_starting_shift = (3 - cc_workshifts) + cc_workshifts // 2
     
     if is_working_day(this_node, prior_date, holidays):
+        if prior_shift == 1:
+            return prior_date, 2
         if cc_workshifts != 1 and prior_shift != 3:
             return prior_date, prior_shift + 1
         elif cc_workdays == 0:
             return prior_date + timedelta(days = 1), default_starting_shift
-        elif prior_shift == 1:
-            return prior_date, 2
     
     prior_date = prior_date + timedelta(days = 1)
     
@@ -452,7 +452,6 @@ def adjust_concerto_es_date(this_node, holidays):
 def calc_finish_date_shift(this_node, start_date, start_shift, holidays):
     # TODO This needs to not capture LOE when the backward pass is done. EF should be the same as LF for LOE, and LF won't use this function.
     if this_node.rdu == 0:
-        print('%s' % (this_node.name))
         if this_node.act_type == 'ME':
             return prev_working_date_shift(this_node, start_date, start_shift, holidays)
         elif start_shift == 1:
