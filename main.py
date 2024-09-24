@@ -572,6 +572,6 @@ def find_pushing_es(this_node, pushing_es, nodes):
     return pushing_es_node.pushing_es
     
 def is_node(name):
-    return not (name == 'Planned Start' or name == 'Scheduled Early Start' or name == 'Authorized Event Date' or name == 'ROTN')
+    return not (name == 'Planned Start' or name == 'Scheduled Early Start' or name == 'Authorized Event Date' or name == 'ROTN' or name == '')
 
 main()
