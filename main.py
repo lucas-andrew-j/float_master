@@ -384,7 +384,7 @@ def prev_working_date_shift(this_node, follow_date, follow_shift, holidays):
     #print (dateutil.parser.parse('1/2/24').weekday())
     cc_workdays = this_node.cal_code % 10
     cc_workshifts = this_node.cal_code // 10
-    default_starting_shift = cc_workshifts % 3 + 1
+    default_starting_shift = min(3, cc_workshifts + 1)
     
     if is_working_day(this_node, follow_date, holidays):
         if follow_shift == 3:
