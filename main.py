@@ -147,7 +147,7 @@ def main():
     mark_tied_nodes(nodes['EG00'], nodes)
 
     holidays = Holiday_Handler(2020, 2030)
-    start_date = dateutil.parser.parse('08/26/2024').date()
+    start_date = dateutil.parser.parse('09/03/2024').date()
     
     print('Performing forward pass')
     for n in nodes:
@@ -339,6 +339,13 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
                         latest_finish = pred_prev_es_date
                         latest_shift = pred_prev_es_shift
                         pushing_es = n
+            elif nodes[n].af_date != '' and nodes[n].out_of_order == True: #and nodes[n].af_date > latest_finish:
+                (af_latest_finish, af_latest_shift, maybe_pushing_es) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
+                
+                if af_latest_finish > latest_finish or (af_latest_finish == latest_finish and af_latest_shift > latest_shift):
+                    latest_finish = af_latest_finish
+                    latest_shift = af_latest_shift
+                    pushing_es = maybe_pushing_es
             elif nodes[n].ef_date != '' and nodes[n].ef_date > latest_finish:
                 latest_finish = nodes[n].ef_date
                 latest_shift = nodes[n].ef_shift
@@ -347,13 +354,6 @@ def find_latest_pred_finish(this_node, earliest_date, nodes, loe_recurse):
                 if nodes[n].ef_shift > latest_shift:
                     latest_shift = nodes[n].ef_shift
                     pushing_es = n
-            elif nodes[n].af_date != '' and nodes[n].out_of_order == True: #and nodes[n].af_date > latest_finish:
-                (af_latest_finish, af_latest_shift, maybe_pushing_es) = find_latest_pred_finish(nodes[n], earliest_date, nodes, False)
-                
-                if af_latest_finish > latest_finish or (af_latest_finish == latest_finish and af_latest_shift > latest_shift):
-                    latest_finish = af_latest_finish
-                    latest_shift = af_latest_shift
-                    pushing_es = maybe_pushing_es
         
     return latest_finish, latest_shift, pushing_es
     
